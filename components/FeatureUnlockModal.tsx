@@ -15,41 +15,48 @@ export const FeatureUnlockModal: React.FC<FeatureUnlockModalProps> = ({ isOpen, 
 
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-lg animate-pop-in">
-            {/* Removed Close Button */}
-
             <div className="relative w-full max-w-md p-6">
-                {/* Glow */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full blur-[100px] opacity-40 animate-pulse"></div>
+                {/* Glow - Ensure z-index is low */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full blur-[100px] opacity-40 animate-pulse z-0"></div>
 
-                <div className="relative bg-gradient-to-b from-indigo-900 to-purple-900 border-4 border-indigo-400 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
+                {/* Content - Ensure z-index is higher */}
+                <div className="relative z-10 bg-gradient-to-b from-indigo-900 to-purple-900 border-4 border-indigo-400 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
                     
+                    {/* Close Button Top Right */}
+                    <button 
+                        onClick={onClose} 
+                        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition-colors z-50"
+                    >
+                        ✕
+                    </button>
+
                     {/* Background Pattern */}
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30 pointer-events-none"></div>
                     
-                    <div className="absolute -top-20 left-0 right-0 h-40 bg-white/10 blur-3xl"></div>
+                    <div className="absolute -top-20 left-0 right-0 h-40 bg-white/10 blur-3xl pointer-events-none"></div>
 
-                    <h2 className="text-3xl md:text-5xl font-black font-display text-white uppercase tracking-widest mb-2 drop-shadow-lg animate-bounce">
+                    <h2 className="text-3xl md:text-5xl font-black font-display text-white uppercase tracking-widest mb-2 drop-shadow-lg animate-bounce relative z-10">
                         UNLOCKED!
                     </h2>
                     
-                    <div className="my-8 relative">
+                    <div className="my-8 relative z-10">
                         <div className="text-9xl drop-shadow-[0_0_30px_rgba(255,255,255,0.5)] scale-125 animate-pulse">{icon}</div>
-                        <div className="absolute inset-0 bg-white/20 blur-2xl -z-10 rounded-full"></div>
+                        <div className="absolute inset-0 bg-white/20 blur-2xl -z-10 rounded-full pointer-events-none"></div>
                     </div>
 
-                    <h3 className="text-2xl font-black text-indigo-200 uppercase tracking-wide mb-2">{featureName}</h3>
-                    <p className="text-white text-base font-bold mb-8">{description}</p>
+                    <h3 className="text-2xl font-black text-indigo-200 uppercase tracking-wide mb-2 relative z-10">{featureName}</h3>
+                    <p className="text-white text-base font-bold mb-8 relative z-10">{description}</p>
 
-                    <div className="flex flex-col gap-3 w-full">
+                    <div className="flex flex-col gap-3 w-full relative z-20">
                         <button 
                             onClick={onOpenFeature}
-                            className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xl uppercase tracking-widest rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] hover:scale-105 active:scale-95 transition-transform border-2 border-green-300 animate-pulse"
+                            className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xl uppercase tracking-widest rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] hover:scale-105 active:scale-95 transition-transform border-2 border-green-300 animate-pulse cursor-pointer"
                         >
                             GO TO {featureName}
                         </button>
                         <button 
                             onClick={onClose}
-                            className="w-full py-3 bg-transparent text-indigo-300 font-bold uppercase tracking-widest rounded-full hover:bg-white/5 transition-colors"
+                            className="w-full py-3 bg-transparent text-indigo-300 font-bold uppercase tracking-widest rounded-full hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-indigo-300/30"
                         >
                             Close
                         </button>

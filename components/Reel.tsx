@@ -15,6 +15,7 @@ interface ReelProps {
   winningIndices: number[]; 
   gameConfig: GameConfig;
   isScatterShowcase?: boolean; 
+  customAssets?: Record<string, string>;
 }
 
 const getRandomSymbol = () => {
@@ -27,7 +28,7 @@ const getRandomSymbol = () => {
   return SymbolType.TEN;
 };
 
-export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping, stopDelay, duration, onStop, winningIndices, gameConfig, isScatterShowcase }) => {
+export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping, stopDelay, duration, onStop, winningIndices, gameConfig, isScatterShowcase, customAssets = {} }) => {
   const [strip, setStrip] = useState<SymbolType[]>([]);
   const [landing, setLanding] = useState(false); 
   const SYMBOL_CONFIGS = GET_SYMBOLS(gameConfig.theme);
@@ -135,6 +136,7 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
                             highlight={isWinner} 
                             isScatterShowcase={isShowcase}
                             heightPercent={100 / totalItems} // Cell takes up proportional height of the tall container
+                            customImage={customAssets[s]}
                         />
                     );
                 })}
@@ -153,8 +155,9 @@ const ReelCell: React.FC<{
     highlight?: boolean, 
     config: SymbolConfig, 
     heightPercent: number,
-    isScatterShowcase?: boolean 
-}> = ({ symbol, blur, highlight, config, heightPercent, isScatterShowcase }) => {
+    isScatterShowcase?: boolean,
+    customImage?: string
+}> = ({ symbol, blur, highlight, config, heightPercent, isScatterShowcase, customImage }) => {
     
     const isScatter = symbol === SymbolType.SCATTER;
     const isWild = symbol === SymbolType.WILD;
@@ -207,15 +210,25 @@ const ReelCell: React.FC<{
                      relative flex flex-col items-center justify-center z-10 w-full h-full
                      ${activeBounce ? 'animate-bounce scale-110' : ''}
                  `}>
-                    <div className={`
-                        ${fontSize} select-none transform 
-                        ${config?.style || ''}
-                        ${activeBounce ? 'drop-shadow-[0_0_25px_rgba(255,255,255,1)]' : ''}
-                    `}>
-                        {config?.icon}
-                    </div>
+                    {customImage ? (
+                        <div className="w-[85%] h-[85%] flex items-center justify-center">
+                            <img 
+                                src={customImage} 
+                                alt={symbol} 
+                                className={`w-full h-full object-contain ${activeBounce ? 'drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'drop-shadow-md'}`} 
+                            />
+                        </div>
+                    ) : (
+                        <div className={`
+                            ${fontSize} select-none transform 
+                            ${config?.style || ''}
+                            ${activeBounce ? 'drop-shadow-[0_0_25px_rgba(255,255,255,1)]' : ''}
+                        `}>
+                            {config?.icon}
+                        </div>
+                    )}
                     
-                    {isScatter && !blur && (
+                    {isScatter && !blur && !customImage && (
                         <div className="absolute bottom-0 w-full flex justify-center items-end pb-1 z-30">
                             <span className={`
                                 block 

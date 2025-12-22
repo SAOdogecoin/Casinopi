@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SymbolType, GameStatus, PlayerState, WinData, QuestState, MiniGameReward, GameConfig, MissionState, MissionType, PassReward, Mission, Deck, Card, DailyLoginState, WildGridCell } from './types';
+import { SymbolType, GameStatus, PlayerState, WinData, QuestState, MiniGameReward, GameConfig, MissionState, MissionType, PassReward, Mission, Deck, Card, DailyLoginState, WildGridCell, CustomAssetMap } from './types';
 import { GAMES_CONFIG, GET_DYNAMIC_WEIGHTS, SPIN_DURATION, REEL_DELAY, INITIAL_BALANCE, GET_PAYLINES, XP_BASE_REQ, GET_ALL_BETS, MAX_BET_BY_LEVEL, formatNumber, formatCommaNumber, formatWinNumber, GET_SYMBOLS, AUTO_SPIN_DELAY, GENERATE_DAILY_MISSIONS, GENERATE_WEEKLY_MISSIONS, GENERATE_MONTHLY_MISSIONS, GENERATE_PASS_REWARDS, INITIAL_GEMS, PICKS_COST_IN_CREDITS, GENERATE_DECKS, CALCULATE_TIME_BONUS, DUPLICATE_CREDIT_VALUES, GENERATE_REPLACEMENT_MISSION, DAILY_LOGIN_REWARDS, PACK_COSTS, SCALE_COIN_REWARD } from './constants';
 import { Reel } from './components/Reel';
 import { WinPopup } from './components/WinPopup';
@@ -20,6 +21,7 @@ import { LoginBonusModal } from './components/LoginBonusModal';
 import { JackpotTicker } from './components/JackpotTicker';
 import { PiggyBankModal } from './components/PiggyBankModal';
 import { FeatureUnlockModal } from './components/FeatureUnlockModal';
+import { SettingsModal } from './components/SettingsModal';
 import { audioService } from './services/audioService';
 
 // Interface for persisted game state
@@ -136,7 +138,7 @@ const App: React.FC = () => {
   const [showWinPopup, setShowWinPopup] = useState(false);
   const [piggyGlow, setPiggyGlow] = useState(false);
   
-  const [activeModal, setActiveModal] = useState<'NONE' | 'SHOP' | 'COLLECTION' | 'MINIGAME' | 'MISSIONS' | 'TIME_BONUS' | 'LOGIN_BONUS' | 'PIGGY' | 'FEATURE_UNLOCK'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'SHOP' | 'COLLECTION' | 'MINIGAME' | 'MISSIONS' | 'TIME_BONUS' | 'LOGIN_BONUS' | 'PIGGY' | 'FEATURE_UNLOCK' | 'SETTINGS'>('NONE');
   const [missionInitialView, setMissionInitialView] = useState<'MISSIONS' | 'PASS'>('MISSIONS');
   const [shopInitialTab, setShopInitialTab] = useState<'COINS' | 'BOOSTS' | 'DIAMONDS'>('COINS');
   
@@ -149,6 +151,11 @@ const App: React.FC = () => {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [levelUpReward, setLevelUpReward] = useState(0);
   const [maxBetIncreased, setMaxBetIncreased] = useState(false);
+  
+  // --- Settings State ---
+  const [disableLevelUpNotifications, setDisableLevelUpNotifications] = useState(false);
+  const [customAssets, setCustomAssets] = useState<CustomAssetMap>({});
+
   // Quest state initialized with separate stages
   const [quest, setQuest] = useState<QuestState>({ 
       credits: 0, 
@@ -188,7 +195,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const openModal = (modal: 'NONE' | 'SHOP' | 'COLLECTION' | 'MINIGAME' | 'MISSIONS' | 'TIME_BONUS' | 'LOGIN_BONUS' | 'PIGGY' | 'FEATURE_UNLOCK') => {
+  const openModal = (modal: 'NONE' | 'SHOP' | 'COLLECTION' | 'MINIGAME' | 'MISSIONS' | 'TIME_BONUS' | 'LOGIN_BONUS' | 'PIGGY' | 'FEATURE_UNLOCK' | 'SETTINGS') => {
       const currentLevel = playerRef.current.level;
       
       if (modal === 'MINIGAME' && currentLevel < 20) {
@@ -330,6 +337,46 @@ const App: React.FC = () => {
           setCelebrationMsg(msg);
           audioService.playWinBig();
       }
+  };
+
+  // --- Asset Management ---
+  const handleUploadAsset = (gameId: string, symbol: SymbolType, file: File | null) => {
+      setCustomAssets(prev => {
+          const gameAssets = { ...(prev[gameId] || {}) };
+          
+          if (file) {
+              // Convert file to Base64 to store in state (simplified for replica)
+              // In a real app, you might upload to server or use IndexedDB
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  const base64 = reader.result as string;
+                  setCustomAssets(curr => ({
+                      ...curr,
+                      [gameId]: {
+                          ...curr[gameId],
+                          [symbol]: base64
+                      }
+                  }));
+              };
+              reader.readAsDataURL(file);
+              return prev; // State update happens in callback
+          } else {
+              // Delete asset
+              delete gameAssets[symbol];
+              return {
+                  ...prev,
+                  [gameId]: gameAssets
+              };
+          }
+      });
+  };
+
+  const handleResetAssets = (gameId: string) => {
+      setCustomAssets(prev => {
+          const newState = { ...prev };
+          delete newState[gameId];
+          return newState;
+      });
   };
 
   useEffect(() => {
@@ -1087,12 +1134,14 @@ const App: React.FC = () => {
               const reward = newLevel * 10000;
               const oldMax = MAX_BET_BY_LEVEL(prev.level);
               const newMax = MAX_BET_BY_LEVEL(newLevel);
-              if (toastCountRef.current < 10) {
+              
+              if (!disableLevelUpNotifications && toastCountRef.current < 10) {
                   setLevelUpReward(reward);
                   setShowLevelUp(true);
                   setMaxBetIncreased(newMax > oldMax);
                   toastCountRef.current += 1;
               }
+              
               updateMissions(MissionType.LEVEL_UP, 1);
 
               // CHECK FEATURE UNLOCKS
@@ -1527,8 +1576,8 @@ const App: React.FC = () => {
                     </div>
                  </div>
              </div>
-             <button onClick={() => setIsMuted(audioService.toggleMute())} className="text-white hover:text-gray-200 transition-colors drop-shadow-md bg-black/20 p-1 rounded-full">
-                 {isMuted ? "🔇" : "🔊"}
+             <button onClick={() => openModal('SETTINGS')} className="text-white hover:text-gray-200 transition-colors drop-shadow-md bg-black/20 p-1 rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center">
+                 <span className="text-sm md:text-lg">⚙️</span>
              </button>
           </div>
       </header>
@@ -1572,6 +1621,7 @@ const App: React.FC = () => {
                                 winningIndices={winData?.winningCells.filter(cell => cell.col === i).map(c => c.row) || []} 
                                 gameConfig={selectedGame} 
                                 isScatterShowcase={status === GameStatus.SCATTER_SHOWCASE} 
+                                customAssets={customAssets[selectedGame.id] || {}}
                             />
                         ))}
                         <PaylinesOverlay winData={winData} rowCount={selectedGame.rows} />
@@ -1679,6 +1729,18 @@ const App: React.FC = () => {
               </div>
           </div>
       )}
+
+      <SettingsModal 
+        isOpen={activeModal === 'SETTINGS'}
+        onClose={() => setActiveModal('NONE')}
+        isMuted={isMuted}
+        onToggleMute={() => setIsMuted(audioService.toggleMute())}
+        disableLevelUp={disableLevelUpNotifications}
+        onToggleLevelUp={() => setDisableLevelUpNotifications(prev => !prev)}
+        customAssets={customAssets}
+        onUploadAsset={handleUploadAsset}
+        onResetAssets={handleResetAssets}
+      />
 
       <ShopModal isOpen={activeModal === 'SHOP'} onClose={() => setActiveModal('NONE')} onBuy={handleShopBuy} level={player.level} isFreeStashClaimed={player.freeStashClaimed} initialTab={shopInitialTab} />
       

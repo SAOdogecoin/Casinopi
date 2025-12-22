@@ -8,7 +8,8 @@ interface FreeSpinsWonPopupProps {
 }
 
 export const FreeSpinsWonPopup: React.FC<FreeSpinsWonPopupProps> = ({ isOpen, count, onComplete }) => {
-    const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+    // Fixed: Explicitly allow null in the generic type to make .current mutable
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (isOpen) {

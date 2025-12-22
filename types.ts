@@ -1,4 +1,5 @@
 
+
 export enum SymbolType {
   TEN = 'TEN',
   JACK = 'JACK',
@@ -181,3 +182,6 @@ export interface DailyLoginState {
     claimedToday: boolean;
     lastClaimTime: number;
 }
+
+// Key is Game ID, Value is Map of SymbolType to ImageURL (Base64)
+export type CustomAssetMap = Record<string, Record<string, string>>;
