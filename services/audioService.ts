@@ -4,6 +4,7 @@ class AudioService {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private muted: boolean = false;
+  private customWinSound: string | null = null;
 
   constructor() {
     try {
@@ -25,6 +26,10 @@ class AudioService {
       this.masterGain.gain.value = this.muted ? 0 : 0.3;
     }
     return this.muted;
+  }
+
+  setCustomWinSound(url: string | null) {
+      this.customWinSound = url;
   }
 
   playTone(freq: number, type: OscillatorType, duration: number, startTime: number = 0) {
@@ -65,6 +70,13 @@ class AudioService {
   }
 
   playWinCheer() {
+    if (this.customWinSound) {
+        const audio = new Audio(this.customWinSound);
+        audio.volume = this.muted ? 0 : 1;
+        audio.play().catch(e => console.warn("Custom audio play failed", e));
+        return;
+    }
+
     if (!this.ctx || !this.masterGain) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
     

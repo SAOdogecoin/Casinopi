@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { CustomAssetMap } from '../types';
 
 interface ShopModalProps {
     isOpen: boolean;
@@ -8,9 +9,10 @@ interface ShopModalProps {
     level: number;
     isFreeStashClaimed?: boolean;
     initialTab?: 'COINS' | 'BOOSTS' | 'DIAMONDS';
+    customAssets?: CustomAssetMap;
 }
 
-export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, level, isFreeStashClaimed, initialTab = 'COINS' }) => {
+export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, level, isFreeStashClaimed, initialTab = 'COINS', customAssets }) => {
     const [activeTab, setActiveTab] = useState<'COINS' | 'BOOSTS' | 'DIAMONDS'>(initialTab);
     const [dynamicPacks, setDynamicPacks] = useState<any[]>([]);
 
@@ -22,7 +24,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, le
     useEffect(() => {
         if (isOpen) {
             setActiveTab(initialTab);
-            const BASE_PER_LEVEL = 1000000; 
+            // Increased to 1 Trillion base per level (1000x previous 1 Billion)
+            const BASE_PER_LEVEL = 1000000000000; 
             
             setDynamicPacks([
                 { 
@@ -61,16 +64,28 @@ export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, le
 
     if (!isOpen) return null;
 
+    // Use Custom Icons if available - HUGE (3x bigger/fill container)
+    const getIcon = (key: string, fallback: string) => {
+        if (customAssets?.global?.[key]) {
+            return (
+                <div className="w-full h-32 md:h-48 flex items-center justify-center p-2">
+                    <img src={customAssets.global[key]} alt={key} className="w-full h-full object-contain drop-shadow-md hover:scale-110 transition-transform duration-500" />
+                </div>
+            );
+        }
+        return <div className="text-6xl md:text-8xl drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500 leading-none py-2">{fallback}</div>;
+    };
+
     // Removed 1 Pack Credit option
     const itemsPacks = [
-        // Pack Credits
-        { label: "10 Pack Credits", type: 'PACK_CREDIT', val: 10, duration: 0, cost: 45, priceLabel: "45 💎", color: "bg-gradient-to-b from-orange-700 to-red-900", icon: '📦' },
-        { label: "100 Pack Credits", type: 'PACK_CREDIT', val: 100, duration: 0, cost: 400, priceLabel: "400 💎", color: "bg-gradient-to-b from-orange-800 to-red-950", icon: '📦' },
+        // Pack Credits - Use BOX icon
+        { label: "10 Pack Credits", type: 'PACK_CREDIT', val: 10, duration: 0, cost: 45, priceLabel: "45 💎", color: "bg-gradient-to-b from-orange-700 to-red-900", iconKey: 'BOX', fallback: '📦' },
+        { label: "100 Pack Credits", type: 'PACK_CREDIT', val: 100, duration: 0, cost: 400, priceLabel: "400 💎", color: "bg-gradient-to-b from-orange-800 to-red-950", iconKey: 'BOX', fallback: '📦' },
         
         // Existing Boosts
-        { label: "2x Player XP (30m)", type: 'BOOST', val: 2, duration: 1800000, cost: 200, priceLabel: "200 💎", color: "bg-gradient-to-b from-fuchsia-700 to-fuchsia-900", icon: '🚀' },
-        { label: "2x Player XP (12H)", type: 'BOOST', val: 2, duration: 43200000, cost: 500, priceLabel: "500 💎", color: "bg-gradient-to-b from-fuchsia-800 to-purple-950", icon: '🚀' },
-        { label: "2x Mission XP (30m)", type: 'PASS_XP', val: 2, duration: 1800000, cost: 300, priceLabel: "300 💎", color: "bg-gradient-to-b from-indigo-600 to-indigo-900", icon: '📜' },
+        { label: "2x Player XP (30m)", type: 'BOOST', val: 2, duration: 1800000, cost: 200, priceLabel: "200 💎", color: "bg-gradient-to-b from-fuchsia-700 to-fuchsia-900", iconKey: 'BOOST', fallback: '🚀' },
+        { label: "2x Player XP (12H)", type: 'BOOST', val: 2, duration: 43200000, cost: 500, priceLabel: "500 💎", color: "bg-gradient-to-b from-fuchsia-800 to-purple-950", iconKey: 'BOOST', fallback: '🚀' },
+        { label: "2x Mission XP (30m)", type: 'PASS_XP', val: 2, duration: 1800000, cost: 300, priceLabel: "300 💎", color: "bg-gradient-to-b from-indigo-600 to-indigo-900", iconKey: 'BOOST', fallback: '📜' },
     ];
 
     const diamondPacks = [
@@ -151,7 +166,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, le
                                     <div className="text-sm md:text-xl font-black uppercase bg-black/40 px-4 py-1 rounded-full text-white whitespace-nowrap border border-white/20 shadow-lg tracking-wide">{pack.label}</div>
                                 </div>
                                 
-                                <div className="text-6xl md:text-8xl drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500 leading-none py-2">🪙</div>
+                                {getIcon('COIN', '🪙')}
                                 
                                 <div className="w-full text-center flex flex-col gap-1">
                                     <div className="text-xl md:text-3xl font-black text-white drop-shadow-md font-display leading-none break-all">
@@ -171,7 +186,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, le
                                 <div className="w-full flex justify-center opacity-0">
                                      <span className="text-sm">.</span>
                                 </div>
-                                <div className="text-6xl md:text-8xl drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500 animate-pulse leading-none py-2">💎</div>
+                                {getIcon('GEM', '💎')}
                                 
                                 <div className="w-full text-center flex flex-col gap-1">
                                     <div className="text-xl md:text-3xl font-black text-white drop-shadow-md font-display leading-none">
@@ -192,7 +207,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({ isOpen, onClose, onBuy, le
                                      <div className="text-xs md:text-base font-black uppercase bg-black/40 px-3 py-1 rounded-full text-white whitespace-nowrap border border-white/20 tracking-wider">ITEM</div>
                                 </div>
 
-                                <div className="text-6xl md:text-8xl drop-shadow-2xl transform group-hover:scale-110 transition-transform duration-500 leading-none py-2">{pack.icon}</div>
+                                {getIcon(pack.iconKey, pack.fallback)}
                                 
                                 <div className="w-full text-center flex flex-col gap-2">
                                     <div className="text-sm md:text-lg font-black text-white drop-shadow-md font-display leading-tight break-words w-full px-1">

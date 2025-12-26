@@ -22,6 +22,7 @@ interface MiniGameModalProps {
     onDiceRoll: (roll: number, newPosition: number, rewards: MiniGameReward[], isFinish: boolean) => void;
     onClose: () => void;
     playerLevel: number;
+    customAssets?: any; 
 }
 
 const GRID_SIZES = [3, 4, 5, 5, 6]; 
@@ -36,17 +37,14 @@ interface BoardStep {
 }
 
 export const MiniGameModal: React.FC<MiniGameModalProps> = ({ 
-    isOpen, credits, picks, wildStage, diceStage, dicePosition = 0, activeGame, savedGrid, onSelectMode, onBuyPicks, onPickTile, onBatchPick, onStageComplete, onGridUpdate, onDiceRoll, onClose, playerLevel 
+    isOpen, credits, picks, wildStage, diceStage, dicePosition = 0, activeGame, savedGrid, onSelectMode, onBuyPicks, onPickTile, onBatchPick, onStageComplete, onGridUpdate, onDiceRoll, onClose, playerLevel, customAssets
 }) => {
     
     // --- Wild Quest State ---
     const currentGridSize = GRID_SIZES[Math.min(wildStage - 1, GRID_SIZES.length - 1)];
     const totalCells = currentGridSize * currentGridSize;
     
-    // Reward Calculation
-    const wildStageReward = 500000 * wildStage * playerLevel;
-    
-    // Grid now derives primarily from props, fallback to local only if needed (shouldn't be needed with App lifting)
+    // Grid now derives primarily from props
     const [grid, setGrid] = useState<WildGridCell[]>([]);
     const [stageWinning, setStageWinning] = useState(false);
 
@@ -60,8 +58,10 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
     const rollButtonTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLongPressRef = useRef(false);
     
+    // 3D Dice Ref
+    const diceRef = useRef<HTMLDivElement>(null);
+    
     const boardLength = 10 + ((diceStage - 1) * 5); // Stage 1: 10, Stage 2: 15, etc.
-    const diceStageReward = 1000000 * diceStage * playerLevel; 
     
     // Ref for scrolling the board
     const boardContainerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +72,8 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
         const gemIdx = Math.floor(Math.random() * totalCells);
         cells[gemIdx] = { revealed: false, content: 'GEM' };
 
-        const baseCoin = 25000 * wildStage * playerLevel;
+        // Scaled base coin: 25 Million * Stage * Level
+        const baseCoin = 25000000 * wildStage * playerLevel;
 
         for(let i=0; i<totalCells; i++) {
             if (i === gemIdx) continue;
@@ -84,7 +85,6 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                     reward = { type: 'COINS', value: highCoin, label: formatNumber(highCoin) };
                 }
                 else if (r < 0.7) reward = { type: 'PICKS', value: 1, label: '+1 Pick' };
-                // Removed XP Boost, replaced with extra Picks
                 else if (r < 0.9) reward = { type: 'PICKS', value: 2, label: '+2 Picks' };
                 else reward = { type: 'DIAMONDS', value: 5, label: '5 💎' };
                 cells[i] = { revealed: false, content: 'REWARD', reward };
@@ -97,7 +97,8 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
     // Init Board
     const initBoard = useCallback(() => {
         const newBoard: BoardStep[] = [];
-        const baseCoin = 10000 * diceStage * playerLevel; 
+        // Scaled base coin: 10 Million * Stage * Level
+        const baseCoin = 10000000 * diceStage * playerLevel; 
 
         for(let i=0; i<=boardLength; i++) {
             let reward: MiniGameReward | undefined = undefined;
@@ -106,7 +107,6 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                  const r = Math.random();
                  if (r < 0.6) reward = { type: 'COINS', value: baseCoin, label: formatNumber(baseCoin) };
                  else if (r < 0.8) reward = { type: 'COINS', value: baseCoin * 2.5, label: formatNumber(baseCoin * 2.5) };
-                 // Increased Gems to 50
                  else if (r < 0.9) reward = { type: 'DIAMONDS', value: 50, label: '50💎' };
                  else reward = { type: 'PICKS', value: 1, label: '+1 Roll' };
             }
@@ -171,12 +171,20 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
         if (autoRoll && !isRolling && !isMoving && picks > 0) {
             const timer = setTimeout(() => {
                 handleRollDice();
-            }, 1000);
+            }, 1500); // Slower auto roll to allow animations
             return () => clearTimeout(timer);
         } else if (autoRoll && picks <= 0) {
             setAutoRoll(false);
         }
     }, [autoRoll, isRolling, isMoving, picks]);
+
+    // --- Asset Helpers ---
+    const getGlobalAsset = (key: string, fallback: string) => {
+        if (customAssets?.global?.[key]) {
+            return <img src={customAssets.global[key]} alt={key} className="w-full h-full object-contain" />;
+        }
+        return <div className="text-4xl md:text-6xl">{fallback}</div>;
+    };
 
     // --- Wild Quest Handlers ---
     const handleTileClick = (index: number) => {
@@ -193,7 +201,6 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
             setTimeout(() => {
                 onStageComplete(50000 * wildStage, 10 * wildStage);
                 setStageWinning(false);
-                // Grid reset happens via Parent resetting 'savedGrid' via init
             }, 2000);
         } else if (cell.content === 'REWARD') {
             audioService.playWinSmall();
@@ -280,20 +287,15 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
         setIsRolling(true);
         audioService.playClick();
 
-        let rolls = 0;
-        const interval = setInterval(() => {
-            setDiceValue(Math.floor(Math.random() * 6) + 1);
-            rolls++;
-            if (rolls > 12) {
-                clearInterval(interval);
-                const finalRoll = Math.floor(Math.random() * 6) + 1;
-                setDiceValue(finalRoll);
-                setIsRolling(false);
-                
-                const collectedRewards: MiniGameReward[] = [];
-                movePlayerStepByStep(visualPosition, visualPosition + finalRoll, collectedRewards);
-            }
-        }, 80);
+        const rollResult = Math.floor(Math.random() * 6) + 1;
+        setDiceValue(rollResult);
+
+        // Simple wait for CSS transition
+        setTimeout(() => {
+            setIsRolling(false);
+            const collectedRewards: MiniGameReward[] = [];
+            movePlayerStepByStep(visualPosition, visualPosition + rollResult, collectedRewards);
+        }, 1200);
     };
 
     // Roll Button Interaction
@@ -345,6 +347,73 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
         }
     };
 
+    const getIcon = (key: string, fallback: string) => {
+        if (customAssets?.global?.[key]) {
+            return <img src={customAssets.global[key]} alt={key} className="w-24 h-24 object-contain drop-shadow-md" />;
+        }
+        return <div className="text-9xl group-hover:scale-110 transition-transform duration-500 drop-shadow-2xl">{fallback}</div>;
+    };
+
+    // --- 3D Dice Component ---
+    const Dice3D = ({ value, rolling }: { value: number, rolling: boolean }) => {
+        const getTransform = () => {
+            if (rolling) return `rotateX(${Math.random() * 720}deg) rotateY(${Math.random() * 720}deg)`;
+            switch(value) {
+                case 1: return 'rotateX(0deg) rotateY(0deg)';
+                case 2: return 'rotateX(-90deg) rotateY(0deg)';
+                case 3: return 'rotateX(0deg) rotateY(-90deg)';
+                case 4: return 'rotateX(0deg) rotateY(90deg)';
+                case 5: return 'rotateX(90deg) rotateY(0deg)';
+                case 6: return 'rotateX(180deg) rotateY(0deg)';
+                default: return 'rotateX(0deg) rotateY(0deg)';
+            }
+        };
+
+        const Dot = () => <div className="w-2 h-2 md:w-3 md:h-3 bg-black rounded-full shadow-inner" />;
+
+        return (
+            <div className="relative w-16 h-16 md:w-24 md:h-24 perspective-[400px]">
+                <div 
+                    className="w-full h-full relative preserve-3d transition-transform duration-[1s] ease-out"
+                    style={{ transformStyle: 'preserve-3d', transform: getTransform() }}
+                >
+                    {/* Face 1 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex items-center justify-center backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <Dot />
+                    </div>
+                    {/* Face 6 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex flex-col justify-between p-2 backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'rotateX(180deg) translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                    </div>
+                    {/* Face 2 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex flex-col justify-between p-3 backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'rotateX(90deg) translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <div className="flex justify-end"><Dot/></div>
+                        <div className="flex justify-start"><Dot/></div>
+                    </div>
+                    {/* Face 5 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex flex-col justify-between p-3 backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'rotateX(-90deg) translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                        <div className="flex justify-center"><Dot/></div>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                    </div>
+                    {/* Face 3 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex flex-col justify-between p-3 backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'rotateY(90deg) translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <div className="flex justify-end"><Dot/></div>
+                        <div className="flex justify-center"><Dot/></div>
+                        <div className="flex justify-start"><Dot/></div>
+                    </div>
+                    {/* Face 4 */}
+                    <div className="absolute inset-0 bg-white border border-gray-300 rounded-lg flex flex-col justify-between p-3 backface-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]" style={{ transform: 'rotateY(-90deg) translateZ(3rem) md:translateZ(4.5rem)' }}>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                        <div className="flex justify-between"><Dot/><Dot/></div>
+                    </div>
+                </div>
+            </div>
+        )
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -365,7 +434,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                              <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/80 z-10"></div>
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/aztec.png')] opacity-30"></div>
                              <div className="relative z-20 flex-1 flex items-center justify-center">
-                                 <div className="text-9xl group-hover:scale-110 transition-transform duration-500 drop-shadow-2xl">🗿</div>
+                                 {getIcon('QUEST_WILD', '🗿')}
                              </div>
                              <div className="relative z-20 w-full bg-black/60 p-6 text-center backdrop-blur-sm border-t border-[#5d4037]">
                                  <h3 className="text-2xl md:text-3xl font-black text-[#e6c288] uppercase tracking-wider">Wild Quest</h3>
@@ -378,7 +447,7 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                              <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/80 z-10"></div>
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/checkered-pattern.png')] opacity-20"></div>
                              <div className="relative z-20 flex-1 flex items-center justify-center">
-                                 <div className="text-9xl group-hover:scale-110 transition-transform duration-500 drop-shadow-2xl">🎲</div>
+                                 {getIcon('QUEST_DICE', '🎲')}
                              </div>
                              <div className="relative z-20 w-full bg-black/60 p-6 text-center backdrop-blur-sm border-t border-[#3949ab]">
                                  <h3 className="text-2xl md:text-3xl font-black text-[#ffeb3b] uppercase tracking-wider">Dice Quest</h3>
@@ -431,7 +500,9 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                              {stageWinning && (
                                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-xl animate-pop-in">
                                      <div className="text-center">
-                                         <div className="text-8xl animate-bounce mb-4">💎</div>
+                                         <div className="text-8xl animate-bounce mb-4">
+                                             {customAssets?.global?.['QUEST_WILD_GEM'] ? <img src={customAssets.global['QUEST_WILD_GEM']} className="w-32 h-32 object-contain mx-auto" /> : '💎'}
+                                         </div>
                                          <h2 className="text-4xl font-black text-[#e6c288] uppercase tracking-widest">Stage Clear!</h2>
                                          <p className="text-white font-bold mt-2">Next Stage Loading...</p>
                                      </div>
@@ -457,16 +528,21 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                                         `}
                                      >
                                          {cell.revealed ? (
-                                             <span className="animate-pop-in">
-                                                 {cell.content === 'GEM' ? '💎' : cell.content === 'REWARD' && cell.reward ? (
-                                                     cell.reward.type === 'COINS' ? '💰' : cell.reward.type === 'PICKS' ? '⛏️' : cell.reward.type === 'XP_BOOST' ? '🚀' : '💎'
+                                             <span className="animate-pop-in w-full h-full flex items-center justify-center p-2">
+                                                 {cell.content === 'GEM' 
+                                                    ? getGlobalAsset('QUEST_WILD_GEM', '💎')
+                                                    : cell.content === 'REWARD' && cell.reward ? (
+                                                     cell.reward.type === 'COINS' ? getGlobalAsset('COIN', '💰') : 
+                                                     cell.reward.type === 'PICKS' ? getGlobalAsset('BOX', '⛏️') : 
+                                                     cell.reward.type === 'XP_BOOST' ? getGlobalAsset('BOOST', '🚀') : 
+                                                     getGlobalAsset('GEM', '💎')
                                                  ) : ''}
                                              </span>
                                          ) : (
                                              <span className="opacity-20 text-4xl">?</span>
                                          )}
                                          {cell.revealed && cell.content === 'REWARD' && (
-                                             <span className="absolute bottom-1 text-[8px] md:text-[10px] font-bold text-white leading-none bg-black/50 px-1 rounded">{cell.reward?.label}</span>
+                                             <span className="absolute bottom-0 text-[8px] md:text-[10px] font-bold text-white leading-none bg-black/70 w-full py-0.5">{cell.reward?.label}</span>
                                          )}
                                      </button>
                                  ))}
@@ -540,23 +616,27 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                                      const isPast = step.index < visualPosition;
                                      
                                      return (
-                                         <div key={step.index} className={`relative shrink-0 w-28 h-28 md:w-36 md:h-36 rounded-2xl flex flex-col items-center justify-center border-4 shadow-2xl transition-all duration-500 snap-center ${step.isFinish ? 'bg-yellow-500 border-yellow-300' : step.isStart ? 'bg-green-600 border-green-400' : 'bg-[#283593] border-[#3949ab]'}`}>
+                                         <div key={step.index} className={`relative shrink-0 w-28 h-28 md:w-36 md:h-36 rounded-2xl flex flex-col items-center justify-center border-4 shadow-2xl transition-all duration-500 snap-center overflow-visible ${step.isFinish ? 'bg-yellow-500 border-yellow-300' : step.isStart ? 'bg-green-600 border-green-400' : 'bg-[#283593] border-[#3949ab]'}`}>
                                              <div className="absolute top-2 left-2 text-[10px] font-black opacity-50 text-white">#{step.index}</div>
                                              
                                              {step.isFinish && <div className="text-4xl mb-1">🏆</div>}
                                              {step.isStart && <div className="text-2xl font-black uppercase text-white">Start</div>}
                                              
                                              {step.reward && !step.isFinish && (
-                                                 <div className="flex flex-col items-center">
-                                                     <span className="text-3xl drop-shadow-md">{step.reward.type === 'COINS' ? '💰' : step.reward.type === 'DIAMONDS' ? '💎' : '⛏️'}</span>
-                                                     <span className="text-[10px] font-bold text-white bg-black/40 px-2 rounded mt-1">{step.reward.label}</span>
+                                                 <div className="flex flex-col items-center w-full h-full p-4">
+                                                     <div className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center">
+                                                         {step.reward.type === 'COINS' ? getGlobalAsset('COIN', '💰') : 
+                                                          step.reward.type === 'DIAMONDS' ? getGlobalAsset('GEM', '💎') : 
+                                                          getGlobalAsset('BOX', '⛏️')}
+                                                     </div>
+                                                     <span className="text-[10px] font-bold text-white bg-black/40 px-2 rounded mt-1 shadow-md whitespace-nowrap">{step.reward.label}</span>
                                                  </div>
                                              )}
 
-                                             {/* Player Avatar - Now Centered inside block at top */}
+                                             {/* Player Avatar - Centered inside block at top */}
                                              {isPlayerHere && (
-                                                 <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 animate-bounce flex flex-col items-center pointer-events-none">
-                                                     <div className="text-5xl md:text-6xl drop-shadow-2xl filter shadow-black">🤠</div>
+                                                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-50 animate-bounce flex flex-col items-center pointer-events-none w-24 h-24">
+                                                     {getGlobalAsset('DICE_PLAYER_ICON', '🤠')}
                                                  </div>
                                              )}
 
@@ -574,11 +654,13 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
 
                     {/* Controls */}
                     <div className="p-6 bg-[#0d47a1] flex flex-col items-center shadow-[0_-10px_30px_rgba(0,0,0,0.3)] relative z-20 border-t-4 border-[#1565c0]">
-                         <div className="flex items-center gap-8">
-                             <div className="bg-[#1565c0] p-4 rounded-2xl border-2 border-[#42a5f5] w-24 h-24 flex items-center justify-center shadow-inner">
-                                 <div className={`text-5xl font-black text-white drop-shadow-lg ${isRolling ? 'animate-spin' : ''}`}>{diceValue}</div>
+                         <div className="flex items-center gap-12">
+                             {/* 3D Dice Display */}
+                             <div className="w-24 h-24 flex items-center justify-center">
+                                 <Dice3D value={diceValue} rolling={isRolling} />
                              </div>
 
+                             {/* 3D Roll Button - Hemisphere */}
                              <button 
                                 onMouseDown={handleRollMouseDown}
                                 onMouseUp={handleRollMouseUp}
@@ -587,12 +669,20 @@ export const MiniGameModal: React.FC<MiniGameModalProps> = ({
                                 onTouchEnd={handleRollMouseUp}
                                 disabled={picks <= 0 || isRolling || isMoving}
                                 className={`
-                                    w-32 h-32 rounded-full font-black text-2xl uppercase tracking-widest shadow-[0_10px_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all border-4 flex flex-col items-center justify-center
-                                    ${autoRoll ? 'bg-red-600 border-red-400 animate-pulse' : picks > 0 ? 'bg-yellow-500 hover:bg-yellow-400 border-yellow-300 text-yellow-900' : 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'}
+                                    w-32 h-32 rounded-full font-black text-2xl uppercase tracking-widest transition-transform active:scale-95 flex flex-col items-center justify-center relative overflow-hidden
+                                    ${picks > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}
+                                    ${autoRoll ? 'animate-pulse ring-4 ring-yellow-400' : ''}
                                 `}
+                                style={{
+                                    background: 'radial-gradient(circle at 30% 30%, #ef4444, #991b1b, #450a0a)',
+                                    boxShadow: 'inset 0 5px 10px rgba(255,255,255,0.3), inset 0 -5px 10px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.5)'
+                                }}
                              >
-                                 {autoRoll ? 'STOP' : 'ROLL'}
-                                 <span className="text-[10px] opacity-70 mt-1">{autoRoll ? 'Auto' : 'Hold Auto'}</span>
+                                 <span className="text-white drop-shadow-md z-10">{autoRoll ? 'STOP' : 'ROLL'}</span>
+                                 <span className="text-[10px] text-red-200 z-10 opacity-80 mt-1">{autoRoll ? 'Auto' : 'Hold Auto'}</span>
+                                 
+                                 {/* Glossy Reflection */}
+                                 <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-10 bg-white/10 rounded-full blur-md"></div>
                              </button>
                          </div>
                     </div>

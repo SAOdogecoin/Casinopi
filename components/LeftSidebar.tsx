@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { QuestSidebar } from './QuestSidebar';
-import { QuestState, MissionState } from '../types';
+import { QuestState, MissionState, CustomAssetMap } from '../types';
 import { formatTime } from '../constants';
 
 interface LeftSidebarProps {
@@ -14,6 +14,7 @@ interface LeftSidebarProps {
     onOpenBattlePass: () => void;
     picks?: number;
     playerLevel: number;
+    customAssets?: CustomAssetMap;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({ 
@@ -25,7 +26,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     onOpenMissions,
     onOpenBattlePass,
     picks = 0,
-    playerLevel
+    playerLevel,
+    customAssets
 }) => {
     
     const missionsReady = missionState.activeMissions.filter(m => m.completed && !m.claimed).length;
@@ -41,18 +43,77 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
     const isQuestUnlocked = playerLevel >= 20;
     const isMissionsUnlocked = playerLevel >= 10;
 
+    // Helper to determine Quest Asset
+    const getQuestAsset = () => {
+        if (quest.activeGame === 'DICE' && customAssets?.global?.['QUEST_DICE']) return customAssets.global['QUEST_DICE'];
+        if (quest.activeGame === 'WILD' && customAssets?.global?.['QUEST_WILD']) return customAssets.global['QUEST_WILD'];
+        if (customAssets?.global?.['QUEST']) return customAssets.global['QUEST'];
+        return null;
+    };
+
+    const getQuestFallback = () => {
+        if (quest.activeGame === 'DICE') return '🎲';
+        if (quest.activeGame === 'WILD') return '🗿';
+        return '🗺️';
+    };
+
+    const getQuestLabel = () => {
+        if (quest.activeGame === 'DICE') return 'DICE';
+        if (quest.activeGame === 'WILD') return 'WILD';
+        return 'QUEST';
+    }
+
+    // Helper for XP Asset
+    const getXpAsset = () => {
+        if (customAssets?.global?.['XP_ICON']) return <img src={customAssets.global['XP_ICON']} className="w-full h-full object-contain drop-shadow-md" />;
+        return <div className="text-2xl font-black text-yellow-400 drop-shadow-md stroke-black stroke-2" style={{ textShadow: '0 2px 0 black' }}>2X XP</div>;
+    }
+
     return (
-        <div className="fixed left-2 md:left-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-30 pointer-events-none items-center">
+        <div className="fixed left-2 md:left-4 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-30 pointer-events-none items-center pl-1">
             {/* Quest Widget - Only if Unlocked */}
             {isQuestUnlocked && (
                 <div className="pointer-events-auto flex flex-col items-center animate-pop-in">
-                    <QuestSidebar 
-                        quest={quest} 
-                        onClaim={onQuestClaim}
-                        xpMultiplier={xpMultiplier}
-                        xpBoostEndTime={xpBoostEndTime}
-                        picks={picks}
-                    />
+                    <div className="flex flex-col items-center gap-1 self-center pointer-events-auto relative">
+                        {/* Quest Button - Bigger, No Container BG */}
+                        <button 
+                            onClick={onQuestClaim}
+                            className="relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center transition-all cursor-pointer hover:scale-110 active:scale-95"
+                        >
+                            {/* Custom Icon Fills */}
+                            {getQuestAsset() ? (
+                                <img src={getQuestAsset()!} className="w-full h-full object-contain drop-shadow-2xl" />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="text-6xl md:text-7xl drop-shadow-2xl mb-1">{getQuestFallback()}</div>
+                                </div>
+                            )}
+
+                            {/* Label Overlay */}
+                            <div className="absolute bottom-0 inset-x-0 flex justify-center z-10">
+                                <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider drop-shadow-[0_2px_0_rgba(0,0,0,1)] bg-black/60 px-2 rounded-full backdrop-blur-[2px]">
+                                    {getQuestLabel()}
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* Credits Counter Badge */}
+                        {quest.credits >= quest.max ? (
+                            <div className="absolute -top-1 -right-1 min-w-[28px] h-7 px-1 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg border-2 border-white z-50 animate-pulse pointer-events-none">
+                                MAX
+                            </div>
+                        ) : quest.credits > 0 && (
+                            <div className="absolute -top-1 -right-1 min-w-[28px] h-7 px-1 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg border-2 border-white z-50 pointer-events-none">
+                                {Math.floor(quest.credits)}
+                            </div>
+                        )}
+                        
+                        {quest.credits >= quest.max && (
+                            <span className="bg-green-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase drop-shadow-md animate-pulse shadow-lg border border-green-400 mt-1 z-50">
+                                COLLECT
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -60,31 +121,38 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             {isMissionsUnlocked && (
                 <div className="pointer-events-auto flex flex-col gap-6 items-center animate-pop-in">
                     
-                    {/* Mission Button */}
+                    {/* Mission Button - Bigger, No Container BG */}
                     <div className="relative flex flex-col items-center justify-center">
                         <button 
                             onClick={onOpenMissions}
-                            className="group relative w-14 h-14 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-indigo-900 to-[#2e1065] shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all overflow-visible z-10"
+                            className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10"
                         >
-                            <div className="absolute inset-0 rounded-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none overflow-hidden"></div>
-                            <div className="flex flex-col items-center justify-center">
-                                 <div className="text-2xl md:text-4xl drop-shadow-md group-hover:-translate-y-1 transition-transform mb-1">📜</div>
-                                 <span className="absolute bottom-2 text-[8px] md:text-[10px] font-black text-white uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,1)] z-10">
-                                    MISSION
-                                 </span>
-                            </div>
-                            
-                            {missionsReady > 0 && (
-                                <div className="absolute -top-2 -right-2 min-w-[24px] h-6 px-1 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black animate-bounce shadow-lg border-2 border-white z-20">
-                                    {missionsReady}
+                            {customAssets?.global?.['MISSIONS'] ? (
+                                <img src={customAssets.global['MISSIONS']} className="w-full h-full object-contain drop-shadow-2xl" />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center">
+                                     <div className="text-6xl md:text-7xl drop-shadow-2xl mb-1">📜</div>
                                 </div>
                             )}
+
+                            <div className="absolute bottom-0 inset-x-0 flex justify-center z-10">
+                                <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider drop-shadow-[0_2px_0_rgba(0,0,0,1)] bg-black/60 px-2 rounded-full backdrop-blur-[2px]">
+                                    MISSION
+                                </span>
+                            </div>
                         </button>
+
+                        {/* Mission Badge */}
+                        {missionsReady > 0 && (
+                            <div className="absolute -top-1 -right-1 min-w-[28px] h-7 px-1 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black animate-bounce shadow-lg border-2 border-white z-50 pointer-events-none">
+                                {missionsReady}
+                            </div>
+                        )}
                         
-                        {/* Conditional Collect Pill - Positioned Absolute */}
+                        {/* Conditional Collect Pill */}
                         {missionsReady > 0 && (
                             <span className={`
-                                absolute -bottom-1 left-1/2 -translate-x-1/2 z-20
+                                absolute -bottom-3 left-1/2 -translate-x-1/2 z-50
                                 px-2 py-0.5 rounded-full text-[8px] font-black uppercase drop-shadow-md animate-pulse shadow-lg border whitespace-nowrap
                                 ${isMissionXpBoosted 
                                     ? 'bg-yellow-500 text-black border-yellow-300' 
@@ -95,28 +163,36 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                         )}
                     </div>
 
-                    {/* Season Pass Button */}
+                    {/* Season Pass Button - Bigger, No Container BG */}
                     <div className="relative flex flex-col items-center justify-center">
                         <button 
                             onClick={onOpenBattlePass}
-                            className="group relative w-14 h-14 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-fuchsia-900 to-[#4a044e] shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all overflow-visible z-10"
+                            className="group relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10"
                         >
-                            <div className="absolute inset-0 rounded-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none overflow-hidden"></div>
-                            <div className="flex flex-col items-center justify-center">
-                                 <div className="text-2xl md:text-4xl drop-shadow-md group-hover:-translate-y-1 transition-transform mb-1">🎫</div>
-                                 <span className="absolute bottom-2 text-[8px] md:text-[10px] font-black text-white uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,1)] z-10">
+                            {customAssets?.global?.['PASS'] ? (
+                                <img src={customAssets.global['PASS']} className="w-full h-full object-contain drop-shadow-2xl" />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center">
+                                     <div className="text-6xl md:text-7xl drop-shadow-2xl mb-1">🎫</div>
+                                </div>
+                            )}
+
+                            <div className="absolute bottom-0 inset-x-0 flex justify-center z-10">
+                                 <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider drop-shadow-[0_2px_0_rgba(0,0,0,1)] bg-black/60 px-2 rounded-full backdrop-blur-[2px]">
                                     PASS
                                  </span>
                             </div>
-                            
-                            {passRewardsReady > 0 && (
-                                <div className="absolute -top-2 -right-2 min-w-[24px] h-6 px-1 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black animate-bounce shadow-lg border-2 border-white z-20">
-                                    {passRewardsReady}
-                                </div>
-                            )}
                         </button>
+
+                        {/* Pass Badge */}
                         {passRewardsReady > 0 && (
-                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 bg-green-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase drop-shadow-md animate-pulse shadow-lg border border-green-400 whitespace-nowrap">
+                            <div className="absolute -top-1 -right-1 min-w-[28px] h-7 px-1 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black animate-bounce shadow-lg border-2 border-white z-50 pointer-events-none">
+                                {passRewardsReady}
+                            </div>
+                        )}
+
+                        {passRewardsReady > 0 && (
+                            <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase drop-shadow-md animate-pulse shadow-lg border border-green-400 whitespace-nowrap">
                                 COLLECT
                             </span>
                         )}
@@ -124,26 +200,19 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
                 </div>
             )}
 
-            {/* XP Boost Indicator (Redesigned) - Show always if active */}
+            {/* XP Boost Indicator - Replaced Container with Icon */}
             {xpMultiplier > 1 && (
-                <div className="relative w-14 h-14 md:w-20 md:h-20 animate-pop-in z-30 rounded-full shadow-xl mt-2 pointer-events-auto">
-                     {/* Pulsing Glow */}
-                     <div className="absolute inset-0 bg-yellow-400 rounded-full blur-md animate-pulse opacity-60"></div>
+                <div className="relative w-20 h-20 md:w-24 md:h-24 animate-pop-in z-30 flex flex-col items-center justify-center mt-2 pointer-events-auto group hover:scale-110 transition-transform">
+                     {/* Asset or Text Icon */}
+                     <div className="w-full h-full flex items-center justify-center drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">
+                         {getXpAsset()}
+                     </div>
                      
-                     {/* Main Circle - Yellow Gradient, No Border Lines */}
-                     <div className="relative w-full h-full rounded-full bg-gradient-to-b from-yellow-300 to-yellow-600 shadow-lg flex items-center justify-center overflow-hidden">
-                         
-                         <div className="flex items-center justify-center gap-0.5 -mt-2">
-                             <span className="text-2xl md:text-3xl font-black text-yellow-900 drop-shadow-sm">2X</span>
-                             <span className="text-[8px] font-bold text-yellow-800 uppercase mt-2">XP</span>
-                         </div>
-
-                         {/* Timer Pill at Bottom */}
-                         <div className="absolute bottom-2 bg-yellow-800/30 px-2 py-0.5 rounded-full">
-                             <span className="text-[8px] md:text-[10px] font-mono font-black text-yellow-900 leading-none">
-                                 <XPTimer endTime={xpBoostEndTime} />
-                             </span>
-                         </div>
+                     {/* Timer Badge Overlay */}
+                     <div className="absolute -bottom-2 bg-black/80 px-2 py-0.5 rounded-full border border-yellow-500/50">
+                         <span className="text-[10px] font-mono font-black text-yellow-400 leading-none">
+                             <XPTimer endTime={xpBoostEndTime} />
+                         </span>
                      </div>
                 </div>
             )}

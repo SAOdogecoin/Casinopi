@@ -1,7 +1,6 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Mission, MissionState, PassReward, MissionFrequency } from '../types';
+import { Mission, MissionState, PassReward, MissionFrequency, CustomAssetMap } from '../types';
 import { formatNumber, formatCommaNumber, SCALE_COIN_REWARD } from '../constants';
 
 interface MissionPassModalProps {
@@ -17,6 +16,7 @@ interface MissionPassModalProps {
     onBuyLevel: () => void;
     onClaimAll: () => void;
     playerLevel: number;
+    customAssets?: CustomAssetMap;
 }
 
 export const MissionPassModal: React.FC<MissionPassModalProps> = ({ 
@@ -31,7 +31,8 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
     onBuyPass,
     onBuyLevel,
     onClaimAll,
-    playerLevel
+    playerLevel,
+    customAssets
 }) => {
     const [view, setView] = useState<'MISSIONS' | 'PASS'>('MISSIONS');
     const [activeTab, setActiveTab] = useState<MissionFrequency>('DAILY');
@@ -89,6 +90,32 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
             return formatNumber(SCALE_COIN_REWARD(reward.value, playerLevel));
         }
         return reward.label;
+    };
+
+    const getRewardIcon = (type: string, isBig: boolean = true) => {
+        // Updated to be huge
+        const sizeClass = "w-32 h-32 md:w-40 md:h-40";
+        if (type === 'COINS' && customAssets?.global?.['COIN']) return <img src={customAssets.global['COIN']} className={`${sizeClass} object-contain p-2`} />;
+        if (type === 'DIAMONDS' && customAssets?.global?.['GEM']) return <img src={customAssets.global['GEM']} className={`${sizeClass} object-contain p-2`} />;
+        if ((type === 'CREDIT_BACK' || type === 'PICKS') && customAssets?.global?.['BOX']) return <img src={customAssets.global['BOX']} className={`${sizeClass} object-contain p-2`} />;
+        if (type === 'XP_BOOST' && customAssets?.global?.['BOOST']) return <img src={customAssets.global['BOOST']} className={`${sizeClass} object-contain p-2`} />;
+        
+        // Fallback Emojis
+        let icon = '📦';
+        if (type === 'COINS') icon = '🪙';
+        if (type === 'DIAMONDS') icon = '💎';
+        if (type === 'PICKS') icon = '⛏️';
+        if (type === 'XP_BOOST') icon = '🚀';
+        
+        return <div className={`text-6xl md:text-8xl mb-4 group-hover:scale-110 transition-transform drop-shadow-lg filter`}>{icon}</div>;
+    }
+
+    // Helper for Mission Icons - Always return Coin
+    const getMissionIcon = () => {
+        if (customAssets?.global?.['COIN']) {
+            return <img src={customAssets.global['COIN']} className="w-full h-full object-contain" />;
+        }
+        return <div className="text-6xl md:text-8xl drop-shadow-lg group-hover:scale-110 transition-transform duration-500">💰</div>;
     };
 
     return (
@@ -157,7 +184,7 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
                             </button>
                         </div>
 
-                        <div className="flex justify-center my-6">
+                        <div className="flex justify-center my-4">
                             <div className="bg-black/40 p-1 rounded-full flex shadow-inner">
                                 <button onClick={() => setActiveTab('DAILY')} className={`px-6 py-2 rounded-full font-black uppercase tracking-widest text-sm md:text-base transition-all ${activeTab === 'DAILY' ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Daily</button>
                                 <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-2 rounded-full font-black uppercase tracking-widest text-sm md:text-base transition-all ${activeTab === 'WEEKLY' ? 'bg-gradient-to-r from-gold-500 to-yellow-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Weekly</button>
@@ -168,28 +195,28 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
                         <div className="flex-1 overflow-y-auto p-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
                                 {currentMissions.map((mission, index) => (
-                                    <div key={mission.id} className={`aspect-[3/4] rounded-2xl ${mission.completed ? 'bg-gradient-to-b from-green-900/80 to-green-950 shadow-[0_0_30px_rgba(21,128,61,0.3)]' : 'bg-gradient-to-b from-[#2a233e] to-[#1e172e]'} flex flex-col relative overflow-hidden shadow-2xl group hover:-translate-y-1 transition-all duration-300 border-2 border-white/5`}>
+                                    <div key={mission.id} className={`aspect-[9/16] rounded-2xl ${mission.completed ? 'bg-gradient-to-b from-green-900/80 to-green-950 shadow-[0_0_30px_rgba(21,128,61,0.3)]' : 'bg-gradient-to-b from-[#2a233e] to-[#1e172e]'} flex flex-col relative overflow-hidden shadow-2xl group hover:-translate-y-1 transition-all duration-300 border-2 border-white/5`}>
                                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
                                         {mission.completed && <div className="absolute inset-0 bg-gradient-to-tr from-green-500/10 to-transparent pointer-events-none"></div>}
-                                        <div className="flex-1 flex items-center justify-center relative">
-                                             <div className="text-7xl md:text-8xl drop-shadow-lg group-hover:scale-110 transition-transform duration-500">
-                                                 {mission.type === 'SPIN_COUNT' ? '🎰' : mission.type === 'WIN_COINS' ? '💰' : '⭐'}
-                                             </div>
+                                        {/* Reduced padding to 1 to allow more space */}
+                                        <div className="flex-1 flex items-center justify-center relative p-1">
+                                             {/* Always use Coin Icon/Emoji */}
+                                             {getMissionIcon()}
                                         </div>
-                                        <div className="p-5 flex flex-col justify-end relative z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-12">
-                                            <div className="text-fuchsia-400 text-xs font-bold uppercase tracking-widest mb-1 shadow-black drop-shadow-sm">Mission</div>
-                                            <div className="text-white font-black text-xl leading-tight mb-3 min-h-[3rem] drop-shadow-md">{mission.description}</div>
+                                        <div className="p-4 flex flex-col justify-end relative z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-8">
+                                            {/* Removed 'Mission' label as requested */}
+                                            <div className="text-white font-black text-lg leading-tight mb-2 min-h-[2.5rem] drop-shadow-md line-clamp-2">{mission.description}</div>
                                             <div className="w-full mb-3">
                                                 <div className="flex justify-between items-end mb-1">
-                                                     <span className="text-gray-400 text-base font-bold">{mission.completed ? '100%' : Math.floor((mission.current / mission.target) * 100) + '%'}</span>
+                                                     <span className="text-gray-400 text-sm font-bold">{mission.completed ? '100%' : Math.floor((mission.current / mission.target) * 100) + '%'}</span>
                                                      <div className="flex flex-col items-end leading-none">
                                                         <div className="flex items-center gap-1">
-                                                            <span className={`font-mono text-sm font-black mb-0.5 ${isXpBoosted ? 'text-yellow-400' : 'text-fuchsia-300'}`}>
+                                                            <span className={`font-mono text-xs font-black mb-0.5 ${isXpBoosted ? 'text-yellow-400' : 'text-fuchsia-300'}`}>
                                                                 +{isXpBoosted ? mission.xpReward * missionState.passBoostMultiplier : mission.xpReward} XP
                                                             </span>
                                                             {isXpBoosted && <span className="text-[10px] bg-yellow-500 text-black px-1 rounded font-bold shadow-sm">2x</span>}
                                                         </div>
-                                                        <span className="text-gold-300 font-mono text-sm font-black">+{formatNumber(mission.coinReward)} Coins</span>
+                                                        <span className="text-gold-300 font-mono text-xs font-black">+{formatNumber(mission.coinReward)} Coins</span>
                                                      </div>
                                                 </div>
                                                 <div className="w-full h-3 bg-black rounded-full overflow-hidden shadow-inner">
@@ -214,6 +241,7 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
 
                 {view === 'PASS' && (
                     <div className="flex-1 flex flex-col bg-black relative">
+                        {/* ... (PASS view content remains mostly same, elided for brevity as focus is on Mission logic) ... */}
                         <div className="absolute top-1/2 left-0 right-0 z-20 pointer-events-none flex justify-between px-2 md:px-4">
                             <button onClick={() => handleScroll('LEFT')} className="w-12 h-12 bg-black/50 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 pointer-events-auto hover:bg-black/80 active:scale-95 text-xl">◀</button>
                             <button onClick={() => handleScroll('RIGHT')} className="w-12 h-12 bg-black/50 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 pointer-events-auto hover:bg-black/80 active:scale-95 text-xl">▶</button>
@@ -237,7 +265,6 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
                              </div>
 
                              <div className="flex items-center gap-4">
-                                 {/* Jump to Current Button */}
                                  <button onClick={jumpToCurrentLevel} className="bg-black/40 border border-white/20 hover:bg-white/10 text-white text-xs font-bold px-4 py-3 rounded-xl uppercase transition-colors flex flex-col items-center">
                                      <span>Jump To</span>
                                      <span>Current</span>
@@ -280,7 +307,7 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
                                         <div className={`text-center font-black text-3xl md:text-4xl ${isUnlocked ? 'text-white drop-shadow-md' : 'text-gray-600'}`}>LEVEL {lvl}</div>
                                         <div className={`aspect-[3/4] bg-gradient-to-b from-[#382952] to-[#231833] rounded-xl p-2 flex flex-col items-center justify-between relative group overflow-hidden shadow-xl transition-opacity duration-300 ${freeReward?.claimed ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                                             <div className="flex-1 flex flex-col items-center justify-center w-full">
-                                                <div className="text-6xl md:text-8xl mb-4 group-hover:scale-110 transition-transform drop-shadow-lg filter">{freeReward?.type === 'COINS' ? '🪙' : freeReward?.type === 'DIAMONDS' ? '💎' : '📦'}</div>
+                                                {freeReward && getRewardIcon(freeReward.type)}
                                                 <span className="font-black text-white text-lg text-center leading-tight mb-2 px-2 drop-shadow-md">{freeReward ? getDisplayValue(freeReward) : ''}</span>
                                                 <span className="text-xs text-gray-300 uppercase font-bold bg-black/50 px-3 py-1 rounded-full shadow-sm">Free</span>
                                             </div>
@@ -289,7 +316,7 @@ export const MissionPassModal: React.FC<MissionPassModalProps> = ({
                                         <div className={`aspect-[3/4] bg-gradient-to-b from-gray-800 to-black rounded-xl p-2 flex flex-col items-center justify-between relative group overflow-hidden shadow-xl transition-opacity duration-300 ${missionState.isPremium ? 'from-[#451a03] to-[#2e1065] shadow-[0_0_20px_rgba(234,179,8,0.2)]' : ''} ${premReward?.claimed ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                                             <div className="flex-1 flex flex-col items-center justify-center w-full relative">
                                                  {!missionState.isPremium && <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/40 backdrop-blur-[1px]"><span className="text-7xl md:text-8xl text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">🔒</span></div>}
-                                                <div className="text-6xl md:text-8xl mb-4 group-hover:scale-110 transition-transform drop-shadow-lg filter">{premReward?.type === 'COINS' ? '💰' : premReward?.type === 'DIAMONDS' ? '💎' : premReward?.type === 'PICKS' ? '⛏️' : '👑'}</div>
+                                                {premReward && getRewardIcon(premReward.type)}
                                                 <span className={`font-black text-lg text-center leading-tight mb-2 px-2 drop-shadow-md ${missionState.isPremium ? 'text-gold-100' : 'text-gray-500'}`}>{premReward ? getDisplayValue(premReward) : ''}</span>
                                                 <span className={`text-xs uppercase font-bold px-3 py-1 rounded-full shadow-sm ${missionState.isPremium ? 'text-gold-400 bg-black/50' : 'text-gray-600 bg-black/20'}`}>Premium</span>
                                             </div>

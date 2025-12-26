@@ -27,9 +27,6 @@ export const SimpleCelebrationModal: React.FC<SimpleCelebrationModalProps> = ({ 
                  <h2 className="text-6xl md:text-8xl font-black font-display text-white text-center mb-2 stroke-black stroke-2 drop-shadow-[0_4px_4px_rgba(0,0,0,1)]" style={{ textShadow: '0 0 10px black, 0 0 20px black, 0 0 30px black' }}>
                      {message}
                  </h2>
-                 <div className="text-white font-black uppercase tracking-[0.3em] text-3xl md:text-5xl animate-pulse drop-shadow-[0_2px_2px_rgba(0,0,0,1)]" style={{ textShadow: '0 0 5px black, 0 0 15px black' }}>
-                     CLAIMED
-                 </div>
             </div>
         </div>
     );

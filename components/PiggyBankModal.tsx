@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { formatCommaNumber, formatNumber } from '../constants';
 import { audioService } from '../services/audioService';
+import { CustomAssetMap } from '../types';
 
 interface PiggyBankModalProps {
     isOpen: boolean;
@@ -10,9 +11,10 @@ interface PiggyBankModalProps {
     diamonds: number;
     onBreak: () => void;
     level: number;
+    customAssets?: CustomAssetMap;
 }
 
-export const PiggyBankModal: React.FC<PiggyBankModalProps> = ({ isOpen, onClose, amount, diamonds, onBreak, level }) => {
+export const PiggyBankModal: React.FC<PiggyBankModalProps> = ({ isOpen, onClose, amount, diamonds, onBreak, level, customAssets }) => {
     const [isBreaking, setIsBreaking] = useState(false);
     const [shake, setShake] = useState(false);
     
@@ -49,6 +51,8 @@ export const PiggyBankModal: React.FC<PiggyBankModalProps> = ({ isOpen, onClose,
         }, 500);
     };
 
+    const customIcon = customAssets?.global?.['PIGGY'];
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 backdrop-blur-md animate-pop-in">
             {/* Wider Container */}
@@ -60,10 +64,15 @@ export const PiggyBankModal: React.FC<PiggyBankModalProps> = ({ isOpen, onClose,
                      <h2 className="text-3xl md:text-5xl font-black font-cartoon text-white uppercase tracking-wider drop-shadow-md mb-2">Piggy Bank</h2>
                      <p className="text-pink-100 text-sm md:text-lg font-bold mb-4">Saves 1% of every bet!</p>
                      
-                     <div className={`relative w-40 h-40 md:w-56 md:h-56 flex items-center justify-center mb-6 transition-transform duration-300 ${isBreaking ? 'scale-110 shake' : shake ? 'shake' : 'animate-bounce'}`}>
-                         <div className="text-9xl md:text-[10rem] filter drop-shadow-2xl">🐷</div>
+                     {/* Increased size, removed bounce */}
+                     <div className={`relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center mb-6 transition-transform duration-300 ${isBreaking ? 'scale-110 shake' : shake ? 'shake' : ''}`}>
+                         {customIcon ? (
+                             <img src={customIcon} className="w-full h-full object-contain filter drop-shadow-2xl" />
+                         ) : (
+                             <div className="text-[10rem] md:text-[12rem] filter drop-shadow-2xl">🐷</div>
+                         )}
                          {isBreaking && <div className="absolute text-8xl animate-ping">💥</div>}
-                         {isFull && !isBreaking && <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce shadow-lg border-2 border-white">FULL!</div>}
+                         {isFull && !isBreaking && <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-pulse shadow-lg border-2 border-white">FULL!</div>}
                      </div>
                      
                      <div className="bg-black/40 rounded-2xl p-4 md:p-6 border border-pink-400/50 mb-6 w-full backdrop-blur-sm">

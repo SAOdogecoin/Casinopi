@@ -1,8 +1,7 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GAMES_CONFIG, formatCommaNumber, formatTime } from '../constants';
-import { GameConfig, QuestState, MissionState } from '../types';
+import { GameConfig, QuestState, MissionState, CustomAssetMap } from '../types';
 
 interface LobbyProps {
     onSelectGame: (game: GameConfig, isHighLimit: boolean) => void;
@@ -19,12 +18,13 @@ interface LobbyProps {
     bonusAmount: number;
     isHighLimit: boolean;
     playerLevel: number; 
+    customAssets?: CustomAssetMap;
 }
 
 export const Lobby: React.FC<LobbyProps> = ({ 
     onSelectGame, 
     onOpenQuest, 
-    onOpenMissions,
+    onOpenMissions, 
     onOpenBattlePass,
     onClaimBonus, 
     onOpenCollection,
@@ -35,7 +35,8 @@ export const Lobby: React.FC<LobbyProps> = ({
     nextTimeBonus,
     bonusAmount,
     isHighLimit,
-    playerLevel
+    playerLevel,
+    customAssets = {} as CustomAssetMap
 }) => {
     
     const [timeLeft, setTimeLeft] = useState(0);
@@ -57,10 +58,21 @@ export const Lobby: React.FC<LobbyProps> = ({
     const totalMissionNotifs = missionsReady + passRewardsReady;
     const questReady = questState.credits >= questState.max;
 
+    // Use Custom Icons if available - Bigger Size
+    const getIcon = (key: string, fallback: string) => {
+        if (customAssets.global?.[key]) {
+            return <img src={customAssets.global[key]} alt={key} className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-md" />;
+        }
+        return <span className="text-6xl md:text-8xl">{fallback}</span>;
+    };
+
     const getQuestIcon = () => {
-        if (questState.activeGame === 'DICE') return '🎲';
-        if (questState.activeGame === 'WILD') return '🗿';
-        return '🗺️';
+        if (customAssets.global?.['QUEST']) {
+             return <img src={customAssets.global['QUEST']} alt="Quest" className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-md" />;
+        }
+        if (questState.activeGame === 'DICE') return <span className="text-6xl md:text-8xl">🎲</span>;
+        if (questState.activeGame === 'WILD') return <span className="text-6xl md:text-8xl">🗿</span>;
+        return <span className="text-6xl md:text-8xl">🗺️</span>;
     };
 
     const getFontClass = (theme: string) => {
@@ -102,8 +114,6 @@ export const Lobby: React.FC<LobbyProps> = ({
     const getUnlockLevel = (index: number) => {
         // Game 0 (Piggy), 1 (Neon), 2 (Pharaoh) -> Unlocked
         if (index < 3) return 0;
-        // Game 3 (Dragon) -> Unlocks at 32
-        // Game 4 (Pirate) -> Unlocks at 42
         return 32 + (index - 3) * 10;
     };
 
@@ -114,24 +124,27 @@ export const Lobby: React.FC<LobbyProps> = ({
     const isCardsLocked = playerLevel < 30;
     const isVipLocked = playerLevel < 40;
 
+    const timeBonusIcon = customAssets.global?.['TIME_BONUS'];
+
     return (
-        <div className={`w-full h-full flex flex-col transition-colors duration-500 ${isHighLimit ? 'bg-red-950' : ''} relative overflow-hidden`}>
+        <div className="w-full h-full flex flex-col relative overflow-hidden">
             
-            <div className="flex-1 relative flex items-center justify-center p-4 pb-32">
+            {/* Game List Container - Flex Grow to take available space */}
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden py-4">
                 <button 
                     onMouseDown={() => startScroll('LEFT')}
                     onMouseUp={stopScroll}
                     onMouseLeave={stopScroll}
                     onTouchStart={() => startScroll('LEFT')}
                     onTouchEnd={stopScroll}
-                    className="absolute left-4 z-30 w-10 h-10 md:w-14 md:h-14 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 transition-all active:scale-95 select-none"
+                    className="absolute left-2 md:left-4 z-30 w-10 h-10 md:w-14 md:h-14 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 transition-all active:scale-95 select-none"
                 >
                     ◀
                 </button>
 
                 <div 
                     ref={scrollRef}
-                    className="grid gap-4 h-[80%] max-h-[600px] auto-cols-max px-8 pr-24 overflow-x-auto no-scrollbar snap-x"
+                    className="grid gap-4 auto-cols-max px-16 overflow-x-auto no-scrollbar snap-x items-center h-full max-h-[60vh]"
                     style={{
                         gridTemplateRows: 'repeat(2, 1fr)',
                         gridAutoFlow: 'column'
@@ -148,6 +161,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                         
                         const unlockLevel = getUnlockLevel(idx);
                         const isLocked = playerLevel < unlockLevel;
+                        const customThumb = customAssets[game.id]?.thumbnail;
 
                         return (
                             <button 
@@ -159,38 +173,46 @@ export const Lobby: React.FC<LobbyProps> = ({
                                     w-[200px] md:w-[260px] h-full
                                     rounded-xl md:rounded-2xl overflow-hidden 
                                     border-2 md:border-4 ${isHighLimit ? 'border-red-900/50 hover:border-red-500' : 'border-transparent hover:border-gold-500'} 
-                                    transition-all duration-300 hover:scale-105 hover:-translate-y-2 shadow-xl
+                                    transition-all duration-300 hover:brightness-110 shadow-xl
                                     flex flex-col
                                     snap-center
                                     ${isLocked ? 'cursor-not-allowed' : ''}
                                 `}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${isHighLimit ? 'from-red-950 via-black to-red-900' : game.color} transition-opacity`}></div>
+                                {/* Only render colored gradient if NO custom thumbnail exists to prevent 'multiply' look */}
+                                {!customThumb && <div className={`absolute inset-0 bg-gradient-to-br ${isHighLimit ? 'from-red-950 via-black to-red-900' : game.color} transition-opacity`}></div>}
                                 
+                                {customThumb && (
+                                    <img src={customThumb} alt={game.name} className="absolute inset-0 w-full h-full object-cover z-0" />
+                                )}
+
                                 <div className="relative z-10 h-full flex flex-col p-4 items-center text-center justify-between">
-                                    <div className="mt-4 bg-black/30 px-3 py-1 rounded-full border border-white/10 shadow-lg">
+                                    <div className="mt-4 bg-black/60 px-3 py-1 rounded-full border border-white/10 shadow-lg backdrop-blur-sm">
                                         <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{isHighLimit ? 'High Limit' : (idx < 3 ? 'Featured' : 'Classic')}</span>
                                     </div>
 
-                                    <div className="flex-1 flex items-center justify-center">
-                                        <span className="text-7xl md:text-9xl drop-shadow-2xl group-hover:scale-110 transition-transform duration-500 filter">
-                                            {game.theme === 'NEON' ? '🎰' : 
-                                                game.theme === 'EGYPT' ? '🦂' : 
-                                                game.theme === 'DRAGON' ? '🐉' :
-                                                game.theme === 'PIRATE' ? '🏴‍☠️' :
-                                                game.theme === 'SPACE' ? '👽' :
-                                                game.theme === 'PIGGY' ? '🐷' : '🍭'}
-                                        </span>
-                                    </div>
+                                    {!customThumb && (
+                                        <div className="flex-1 flex items-center justify-center">
+                                            <span className="text-7xl md:text-9xl drop-shadow-2xl group-hover:scale-110 transition-transform duration-500 filter">
+                                                {game.theme === 'NEON' ? '🎰' : 
+                                                    game.theme === 'EGYPT' ? '🦂' : 
+                                                    game.theme === 'DRAGON' ? '🐉' :
+                                                    game.theme === 'PIRATE' ? '🏴‍☠️' :
+                                                    game.theme === 'SPACE' ? '👽' :
+                                                    game.theme === 'PIGGY' ? '🐷' : '🍭'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {customThumb && <div className="flex-1"></div>}
                                     
-                                    <div className={`backdrop-blur-md p-3 rounded-xl w-full bg-black/60 border border-white/10 shadow-2xl`}>
+                                    <div className={`backdrop-blur-md p-3 rounded-xl w-full bg-black/80 border border-white/20 shadow-2xl`}>
                                         <h3 className={`text-xl md:text-2xl font-black mb-1 leading-none uppercase tracking-wide ${getFontClass(game.theme)} ${titleStyle}`}>{game.name}</h3>
                                         <p className="text-xs text-gray-300 font-bold uppercase tracking-wider font-body">{game.description.split('.')[0]}</p>
                                     </div>
                                 </div>
                                 
                                 {isLocked && (
-                                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-4 text-center border-4 border-white/10 rounded-xl">
+                                    <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-4 text-center border-4 border-white/10 rounded-xl">
                                         <span className="text-6xl mb-2 drop-shadow-lg">🔒</span>
                                         <div className="bg-red-600 px-4 py-1 rounded-full shadow-lg mb-1">
                                             <span className="text-white font-black uppercase text-sm tracking-wider">LOCKED</span>
@@ -222,6 +244,7 @@ export const Lobby: React.FC<LobbyProps> = ({
 
                         const unlockLevel = getUnlockLevel(realIdx);
                         const isLocked = playerLevel < unlockLevel;
+                        const customThumb = customAssets[game.id]?.thumbnail;
 
                         return (
                             <button 
@@ -233,24 +256,33 @@ export const Lobby: React.FC<LobbyProps> = ({
                                     w-[200px] md:w-[260px] h-full
                                     rounded-xl overflow-hidden 
                                     border-2 ${isHighLimit ? 'border-red-900/30 hover:border-red-500' : 'border-white/10 hover:border-gold-500'} 
-                                    transition-all duration-300 hover:scale-105 shadow-lg
+                                    transition-all duration-300 hover:brightness-110 shadow-lg
                                     flex flex-col items-center justify-end
                                     snap-center
                                     ${isLocked ? 'cursor-not-allowed' : ''}
                                 `}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-r ${isHighLimit ? 'from-red-950 to-black' : game.color} opacity-80 group-hover:opacity-100 transition-opacity`}></div>
-                                <div className="absolute inset-0 flex items-center justify-center pb-6">
-                                     <div className="text-7xl md:text-8xl drop-shadow-2xl group-hover:scale-110 transition-transform duration-300">
-                                         {icon}
-                                     </div>
-                                </div>
-                                <div className="relative z-10 w-full bg-black/40 backdrop-blur-sm py-2 px-2 border-t border-white/5 flex flex-col items-center">
+                                {/* Only render colored gradient if NO custom thumbnail exists */}
+                                {!customThumb && <div className={`absolute inset-0 bg-gradient-to-r ${isHighLimit ? 'from-red-950 to-black' : game.color} opacity-80 group-hover:opacity-100 transition-opacity`}></div>}
+                                
+                                {customThumb && (
+                                    <img src={customThumb} alt={game.name} className="absolute inset-0 w-full h-full object-cover z-0" />
+                                )}
+
+                                {!customThumb && (
+                                    <div className="absolute inset-0 flex items-center justify-center pb-6">
+                                         <div className="text-7xl md:text-8xl drop-shadow-2xl group-hover:scale-110 transition-transform duration-300">
+                                             {icon}
+                                         </div>
+                                    </div>
+                                )}
+
+                                <div className="relative z-10 w-full bg-black/60 backdrop-blur-sm py-2 px-2 border-t border-white/10 flex flex-col items-center">
                                      <h3 className={`text-base md:text-lg font-black uppercase tracking-tight leading-none text-center ${getFontClass(game.theme)} ${titleStyle}`}>{game.name}</h3>
                                 </div>
 
                                 {isLocked && (
-                                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-2 text-center border-2 border-white/10 rounded-xl">
+                                    <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center p-2 text-center border-2 border-white/10 rounded-xl">
                                         <span className="text-4xl mb-1 drop-shadow-lg">🔒</span>
                                         <span className="text-white font-black uppercase text-sm bg-red-600 px-2 rounded-full">Lvl {unlockLevel}</span>
                                     </div>
@@ -267,13 +299,14 @@ export const Lobby: React.FC<LobbyProps> = ({
                     onMouseLeave={stopScroll}
                     onTouchStart={() => startScroll('RIGHT')}
                     onTouchEnd={stopScroll}
-                    className="absolute right-4 z-30 w-10 h-10 md:w-14 md:h-14 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 transition-all active:scale-95 select-none"
+                    className="absolute right-2 md:right-4 z-30 w-10 h-10 md:w-14 md:h-14 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center shadow-lg border border-white/20 transition-all active:scale-95 select-none"
                 >
                     ▶
                 </button>
             </div>
 
-            <div className="absolute bottom-0 left-0 w-full h-[100px] md:h-[120px] z-50 flex items-end justify-center">
+            {/* Bottom Bar - Fixed at bottom of container, no longer absolute to avoid being cut off */}
+            <div className="w-full h-[100px] md:h-[120px] shrink-0 z-50 flex items-end justify-center relative">
                 <div className="absolute bottom-0 w-full h-[80px] md:h-[90px] bg-gradient-to-b from-[#6b21a8] to-[#3b0764] shadow-[0_-10px_30px_rgba(107,33,168,0.6)] flex items-center justify-center">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay"></div>
                 </div>
@@ -283,12 +316,12 @@ export const Lobby: React.FC<LobbyProps> = ({
                     {/* Piggy Bank */}
                      <button 
                         onClick={!isPiggyLocked ? onOpenPiggyBank : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isPiggyLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isPiggyLocked ? 'grayscale opacity-50' : ''}`}
                     >
                         <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                             <span className="text-6xl md:text-8xl">🐷</span>
+                             {getIcon('PIGGY', '🐷')}
                         </div>
-                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Piggy</span>
+                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">Piggy</span>
                         {isPiggyLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>
@@ -300,13 +333,13 @@ export const Lobby: React.FC<LobbyProps> = ({
                     {/* Quest */}
                     <button 
                         onClick={!isQuestLocked ? onOpenQuest : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isQuestLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isQuestLocked ? 'grayscale opacity-50' : ''}`}
                     >
                         <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                             <span className="text-6xl md:text-8xl">{getQuestIcon()}</span>
+                             {getQuestIcon()}
                              {questReady && !isQuestLocked && <div className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-white animate-bounce"></div>}
                         </div>
-                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Quest</span>
+                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">Quest</span>
                         {isQuestLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>
@@ -318,17 +351,17 @@ export const Lobby: React.FC<LobbyProps> = ({
                     {/* Season Pass */}
                     <button 
                         onClick={!isMissionsLocked ? onOpenBattlePass : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isMissionsLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isMissionsLocked ? 'grayscale opacity-50' : ''}`}
                     >
                          <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                             <span className="text-6xl md:text-8xl">🎫</span>
+                             {getIcon('PASS', '🎫')}
                              {totalMissionNotifs > 0 && !isMissionsLocked && (
                                  <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
                                      {totalMissionNotifs}
                                  </div>
                              )}
                          </div>
-                         <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Season Pass</span>
+                         <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">Season Pass</span>
                          {isMissionsLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>
@@ -337,46 +370,55 @@ export const Lobby: React.FC<LobbyProps> = ({
                         )}
                     </button>
 
-                    {/* Time Bonus (Center) */}
+                    {/* Time Bonus (Center) - No Background, Bigger Icon */}
                     <button 
                         onClick={onClaimBonus}
-                        className="flex flex-col items-center group relative active:scale-95 transition-transform mb-4 mx-2"
+                        className="flex flex-col items-center group relative active:scale-95 transition-transform mb-4 mx-4"
                     >
                          <div className={`
-                             relative w-24 h-24 md:w-28 md:h-28 rounded-full border-4 shadow-[0_0_40px_rgba(255,215,0,0.5)] 
+                             relative w-28 h-28 md:w-36 md:h-36 
                              flex flex-col items-center justify-center group-hover:scale-110 transition-transform z-10 
-                             ${isReadyToCollect ? 'bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 border-yellow-200' : 'bg-gray-800 border-gray-600'}
                          `}>
-                             {isReadyToCollect && <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity animate-spin-slow"></div>}
-                             
-                             {isReadyToCollect ? (
-                                 <>
-                                     <span className="text-sm md:text-base font-black uppercase text-yellow-900 leading-none mt-1 drop-shadow-sm">FREE</span>
-                                     <span className="text-xl md:text-2xl font-black uppercase text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.5)] leading-none">COINS</span>
-                                 </>
+                             {timeBonusIcon ? (
+                                <img src={timeBonusIcon} alt="Free Coins" className="w-full h-full object-contain drop-shadow-2xl" />
                              ) : (
-                                 <div className="flex flex-col items-center">
-                                     <span className="text-xs font-bold text-gray-400 uppercase">Next</span>
-                                     <span className="text-base font-black text-gray-300 font-mono">{formatTime(timeLeft)}</span>
+                                <div className="text-7xl md:text-9xl drop-shadow-2xl filter brightness-110">
+                                    🎁
+                                </div>
+                             )}
+                             
+                             {/* Text overlay for timer if not ready */}
+                             {!isReadyToCollect && !timeBonusIcon && (
+                                 <div className="absolute bottom-4 flex flex-col items-center z-10 bg-black/60 px-2 rounded-lg">
+                                     <span className="text-xs font-bold text-gray-200 uppercase">Next</span>
+                                     <span className="text-sm font-black text-white font-mono">{formatTime(timeLeft)}</span>
                                  </div>
                              )}
                              
-                             {isReadyToCollect && <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-600 rounded-full border-2 border-white animate-ping opacity-75"></div>}
-                             {isReadyToCollect && <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white">!</div>}
+                             {/* Timer Overlay for Custom Icon */}
+                             {!isReadyToCollect && timeBonusIcon && (
+                                 <div className="absolute bottom-0 flex flex-col items-center z-10 bg-black/70 px-3 py-1 rounded-full border border-white/20">
+                                     <span className="text-xs font-black text-white font-mono">{formatTime(timeLeft)}</span>
+                                 </div>
+                             )}
+
+                             {isReadyToCollect && <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-600 rounded-full border-2 border-white animate-ping opacity-75 z-20"></div>}
+                             {isReadyToCollect && <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-600 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white z-20">!</div>}
                          </div>
                          
                          {isReadyToCollect && <div className="absolute -bottom-4 w-28 h-6 bg-yellow-500/40 blur-xl rounded-full animate-pulse"></div>}
+                         <span className="text-sm md:text-xl font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Free Coins</span>
                     </button>
 
                     {/* Missions */}
                     <button 
                         onClick={!isMissionsLocked ? onOpenMissions : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isMissionsLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isMissionsLocked ? 'grayscale opacity-50' : ''}`}
                     >
                          <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                             <span className="text-6xl md:text-8xl">📜</span>
+                             {getIcon('MISSIONS', '📜')}
                          </div>
-                         <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Missions</span>
+                         <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">Missions</span>
                          {isMissionsLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>
@@ -388,12 +430,12 @@ export const Lobby: React.FC<LobbyProps> = ({
                     {/* Cards */}
                     <button 
                         onClick={!isCardsLocked ? onOpenCollection : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isCardsLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isCardsLocked ? 'grayscale opacity-50' : ''}`}
                     >
                         <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                            <span className="text-6xl md:text-8xl">🃏</span>
+                            {getIcon('CARDS', '🃏')}
                         </div>
-                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">Cards</span>
+                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">Cards</span>
                         {isCardsLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>
@@ -405,13 +447,13 @@ export const Lobby: React.FC<LobbyProps> = ({
                     {/* VIP Limit Toggle */}
                     <button 
                         onClick={!isVipLocked ? onToggleVIP : undefined}
-                        className={`flex flex-col items-center group relative active:scale-95 transition-transform -mb-2 ${isVipLocked ? 'grayscale opacity-50' : ''}`}
+                        className={`flex flex-col items-center group relative active:scale-95 transition-transform ${isVipLocked ? 'grayscale opacity-50' : ''}`}
                     >
                         <div className="group-hover:-translate-y-4 transition-transform duration-300 filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">
-                            <span className="text-6xl md:text-8xl">{isHighLimit ? '👑' : '🧢'}</span>
+                            {getIcon('VIP', isHighLimit ? '👑' : '🧢')}
                              {isHighLimit && <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full border-2 border-white animate-pulse"></div>}
                         </div>
-                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase mt-1 tracking-wider group-hover:text-white drop-shadow-md font-heavy">{isHighLimit ? 'VIP Active' : 'VIP'}</span>
+                        <span className="text-xs md:text-sm font-black text-purple-200 uppercase tracking-wider group-hover:text-white drop-shadow-md font-heavy">{isHighLimit ? 'High Roll' : 'High Roll'}</span>
                         {isVipLocked && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg">
                                 <span className="text-2xl mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">🔒</span>

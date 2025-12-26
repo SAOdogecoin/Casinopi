@@ -1,9 +1,7 @@
 
-
-
 import React, { useState, useEffect } from 'react';
-import { Deck, Card, CardRarity } from '../types';
-import { formatNumber, PACK_COSTS, formatCommaNumber } from '../constants';
+import { Deck, Card, CardRarity, CustomAssetMap } from '../types';
+import { formatNumber, PACK_COSTS, formatCommaNumber, GET_SYMBOLS, GAMES_CONFIG } from '../constants';
 import { audioService } from '../services/audioService';
 
 interface CardCollectionModalProps {
@@ -21,6 +19,7 @@ interface CardCollectionModalProps {
     packCredits: number;
     grandPrize?: number;
     getDeckReward?: (deckId: string) => number;
+    customAssets?: CustomAssetMap;
 }
 
 export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
@@ -37,7 +36,8 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
     tokens,
     packCredits,
     grandPrize = 0,
-    getDeckReward = (deckId: string) => 0
+    getDeckReward = (deckId: string) => 0,
+    customAssets
 }) => {
     const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'ALBUM' | 'PACKS'>('ALBUM');
@@ -75,7 +75,7 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
             }
         }
         switch(rarity) {
-            case 'LEGENDARY': return 'border-yellow-400 bg-yellow-950/90 text-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.8)] animate-pulse border-4';
+            case 'LEGENDARY': return 'border-yellow-400 bg-yellow-950/90 text-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.8)] border-4';
             case 'EPIC': return 'border-purple-500 bg-purple-950/90 text-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.6)]';
             case 'RARE': return 'border-blue-400 bg-blue-950/90 text-blue-300 shadow-[0_0_30px_rgba(59,130,246,0.6)]';
             default: return 'border-gray-500 bg-gray-900/90 text-gray-400 shadow-none';
@@ -132,6 +132,55 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
         { credits: 100, cost: 5000 }
     ];
 
+    const getIcon = (key: string, fallback: string) => {
+        if (customAssets?.global?.[key]) {
+            return <img src={customAssets.global[key]} alt={key} className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-md mb-2" />;
+        }
+        return <div className="text-7xl md:text-8xl animate-bounce drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-10">{fallback}</div>;
+    };
+
+    // Helper to render the specific game symbol for the card
+    const renderCardSymbol = (card: Card) => {
+        const deck = decks.find(d => card.id.startsWith(d.gameId));
+        if (!deck) return <div className="text-6xl">❓</div>;
+
+        const symbolConfig = GET_SYMBOLS(deck.theme)[card.symbolType];
+        const customIcon = customAssets?.[deck.gameId]?.[card.symbolType];
+
+        if (customIcon) {
+            return <img src={customIcon} className="w-full h-full object-cover scale-110" />;
+        }
+        
+        return (
+            <div className={`text-[5rem] md:text-[6rem] ${symbolConfig.style}`}>
+                {symbolConfig.icon}
+            </div>
+        );
+    };
+
+    // Helper to get deck banner
+    const getDeckBanner = (deck: Deck) => {
+        // Try Custom Asset Thumbnail
+        const customThumb = customAssets?.[deck.gameId]?.thumbnail;
+        if (customThumb) {
+            return <img src={customThumb} alt={deck.gameName} className="w-full h-full object-cover" />;
+        }
+        
+        // Try Game Config Background or Thumbnail logic fallback
+        // Since we don't have access to the exact logic of Lobby here without importing, we will use a fallback or the icon logic
+        // But we want the full banner. Let's try to simulate the lobby look.
+        
+        const gameConfig = GAMES_CONFIG.find(g => g.id === deck.gameId);
+        
+        return (
+            <div className={`w-full h-full bg-gradient-to-b ${gameConfig ? gameConfig.color : 'from-gray-800 to-black'} flex items-center justify-center`}>
+                 <div className="text-6xl md:text-8xl opacity-80 drop-shadow-2xl">
+                    {deck.theme === 'NEON' ? '🎰' : deck.theme === 'EGYPT' ? '🦂' : deck.theme === 'DRAGON' ? '🐉' : '🃏'}
+                 </div>
+            </div>
+        );
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -140,7 +189,7 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
             {isOpeningPack && (
                 <div className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center">
                     {packStage === 'SHAKING' && (
-                        <div className="text-9xl animate-bounce drop-shadow-[0_0_50px_rgba(255,255,255,0.5)] pointer-events-none">📦</div>
+                        getIcon('BOX', '📦')
                     )}
                     {packStage === 'BURST' && (
                         <div className="text-9xl scale-150 transition-transform duration-300 opacity-0 pointer-events-none">💥</div>
@@ -153,21 +202,36 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
                                         key={i} 
                                         className={`
                                             relative aspect-[2/3] w-full max-w-[180px] rounded-lg border-2 ${getCardStyle(card.rarity, false)} 
-                                            p-2 flex flex-col items-center justify-center animate-pop-in mt-6
+                                            p-0 flex flex-col items-center justify-center animate-pop-in mt-6 overflow-hidden
                                             ${card.rarity === 'LEGENDARY' ? 'animate-pulse duration-700' : ''}
                                         `} 
                                         style={{ animationDelay: `${i * 50}ms` }}
                                      >
-                                         <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-lg whitespace-nowrap ${card.rarity === 'LEGENDARY' ? 'bg-yellow-500 text-black border-yellow-200' : card.rarity === 'EPIC' ? 'bg-purple-600 text-white border-purple-400' : card.rarity === 'RARE' ? 'bg-blue-600 text-white border-blue-400' : 'bg-gray-600 text-white border-gray-400'}`}>
-                                             {card.rarity}
+                                         <div className={`absolute top-0 left-0 right-0 z-20 flex justify-center`}>
+                                             <div className={`px-3 py-0.5 rounded-b-lg text-xs font-black uppercase tracking-widest border-b border-x shadow-lg whitespace-nowrap ${card.rarity === 'LEGENDARY' ? 'bg-yellow-500 text-black border-yellow-200' : card.rarity === 'EPIC' ? 'bg-purple-600 text-white border-purple-400' : card.rarity === 'RARE' ? 'bg-blue-600 text-white border-blue-400' : 'bg-gray-600 text-white border-gray-400'}`}>
+                                                 {card.rarity}
+                                             </div>
                                          </div>
 
-                                         {card.isNew && <div className="absolute top-1 right-1 bg-red-600 text-white text-xs font-black px-2 py-0.5 rounded animate-pulse z-20 border border-white/20">NEW</div>}
-                                         <div className="text-4xl md:text-6xl mb-2 drop-shadow-xl">{card.icon}</div>
-                                         <div className="text-[10px] md:text-sm font-black text-center bg-black/50 px-2 rounded z-10">{card.name}</div>
+                                         {card.isNew && <div className="absolute top-8 right-1 bg-red-600 text-white text-xs font-black px-2 py-0.5 rounded animate-pulse z-20 border border-white/20 shadow-lg">NEW</div>}
+                                         
+                                         {/* Full Card Image/Icon */}
+                                         <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                                             {renderCardSymbol(card)}
+                                         </div>
+                                         
+                                         {/* Legendary Holographic Shine */}
+                                         {card.rarity === 'LEGENDARY' && (
+                                             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-50 animate-shine pointer-events-none z-10"></div>
+                                         )}
+
+                                         <div className="absolute bottom-0 w-full bg-black/60 backdrop-blur-sm p-1 z-20 border-t border-white/10">
+                                             <div className="text-[10px] md:text-sm font-black text-center text-white truncate">{card.name}</div>
+                                         </div>
+
                                          {card.isDuplicate && (
-                                             <div className="absolute inset-x-0 bottom-2 flex flex-col items-center justify-center z-30">
-                                                 <div className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-black/80 px-2 py-1 rounded border border-yellow-500/30">Duplicate</div>
+                                             <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/40">
+                                                 <div className="text-yellow-400 text-xs font-black uppercase tracking-widest bg-black/90 px-3 py-1 rounded border border-yellow-500/30 transform -rotate-12 shadow-xl">Duplicate</div>
                                              </div>
                                          )}
                                      </div>
@@ -284,18 +348,23 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
                                      const collected = deck.cards.filter(c => c.count > 0).length;
                                      const total = deck.cards.length;
                                      const isComplete = collected === total;
+                                     
                                      return (
                                          <button key={deck.gameId} onClick={() => setSelectedDeckId(deck.gameId)} className="flex flex-col items-center group">
-                                             <div className={`relative w-full aspect-[3/4] bg-[#1e1b4b] rounded-xl border-4 ${isComplete ? 'border-gold-500 shadow-[0_0_30px_rgba(255,215,0,0.3)]' : 'border-gray-700 group-hover:border-purple-500'} transition-all duration-300 flex flex-col items-center justify-center shadow-2xl`}>
-                                                 <div className={`relative z-10 w-full h-full bg-gradient-to-b ${deck.theme === 'NEON' ? 'from-purple-900 to-black' : deck.theme === 'EGYPT' ? 'from-orange-900 to-black' : 'from-gray-800 to-black'} rounded-lg flex items-center justify-center overflow-hidden`}>
-                                                     <div className="text-6xl md:text-8xl opacity-80 group-hover:scale-110 transition-transform duration-500 drop-shadow-2xl">
-                                                        {deck.theme === 'NEON' ? '🎰' : deck.theme === 'EGYPT' ? '🦂' : deck.theme === 'DRAGON' ? '🐉' : '🃏'}
-                                                     </div>
-                                                     {isComplete && <div className="absolute top-2 right-2 text-2xl">✅</div>}
+                                             <div className={`relative w-full aspect-[3/4] bg-[#1e1b4b] rounded-xl border-4 ${isComplete ? 'border-gold-500 shadow-[0_0_30px_rgba(255,215,0,0.3)]' : 'border-gray-700 group-hover:border-purple-500'} transition-all duration-300 flex flex-col items-center justify-center shadow-2xl overflow-hidden`}>
+                                                 
+                                                 {/* Full Size Banner Image */}
+                                                 <div className="absolute inset-0 z-0 group-hover:scale-110 transition-transform duration-500">
+                                                     {getDeckBanner(deck)}
                                                  </div>
                                                  
+                                                 {/* Dark overlay for text readability */}
+                                                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors z-10"></div>
+
+                                                 {isComplete && <div className="absolute top-2 right-2 z-20 text-3xl drop-shadow-md">✅</div>}
+                                                 
                                                  {/* Reward Tag */}
-                                                 <div className="absolute bottom-2 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-lg">
+                                                 <div className="absolute bottom-2 z-20 bg-black/80 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 shadow-lg">
                                                      <div className="text-[10px] text-gray-300 uppercase font-bold text-center">Reward</div>
                                                      <div className="text-gold-400 font-mono font-black text-sm">{formatNumber(getDeckReward(deck.gameId))}</div>
                                                  </div>
@@ -359,7 +428,7 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
                                     return (
                                     <div key={pack.id} className={`relative aspect-[2/3] rounded-2xl overflow-hidden border-2 border-white/10 shadow-2xl flex flex-col bg-gradient-to-b ${pack.color} group hover:-translate-y-2 transition-transform duration-300`}>
                                         <div className="flex-1 flex flex-col items-center justify-center bg-black/20 relative py-8">
-                                            <div className="text-7xl md:text-8xl animate-bounce drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-10">{pack.icon}</div>
+                                            {getIcon('BOX', pack.icon)}
                                         </div>
                                         <div className="p-4 flex flex-col items-center text-center bg-black/40 backdrop-blur-md border-t border-white/10 w-full">
                                             <h3 className="text-xl font-black font-display text-white uppercase mb-1 drop-shadow-md tracking-wide">{pack.name}</h3>
@@ -413,13 +482,26 @@ export const CardCollectionModal: React.FC<CardCollectionModalProps> = ({
                             </div>
                             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 {decks.find(d => d.gameId === selectedDeckId)?.cards.map((card, i) => (
-                                    <div key={i} className={`aspect-[2/3] rounded-lg border-2 ${getCardStyle(card.rarity, card.count === 0)} p-2 flex flex-col items-center justify-between relative transition-all ${card.count === 0 ? '' : 'shadow-lg hover:scale-105'}`}>
-                                        <div className="w-full flex justify-between items-start">
-                                            <span className={`text-[10px] md:text-xs font-black uppercase px-1.5 py-0.5 rounded ${card.rarity === 'LEGENDARY' ? 'bg-yellow-500 text-black' : card.rarity === 'EPIC' ? 'bg-purple-600 text-white' : card.rarity === 'RARE' ? 'bg-blue-600 text-white' : 'bg-gray-600 text-white'}`}>{card.rarity}</span>
-                                            {card.count > 0 && <span className="text-[8px] font-bold bg-black/60 text-white px-1.5 rounded">x{card.count}</span>}
+                                    <div key={i} className={`aspect-[2/3] rounded-lg border-2 ${getCardStyle(card.rarity, card.count === 0)} p-0 flex flex-col items-center justify-center relative transition-all overflow-hidden ${card.count === 0 ? '' : 'shadow-lg hover:scale-105'} ${card.rarity === 'LEGENDARY' && card.count > 0 ? 'ring-2 ring-yellow-400' : ''}`}>
+                                        
+                                        <div className="absolute top-0 inset-x-0 z-20 flex justify-center pt-1">
+                                            <span className={`text-[8px] md:text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shadow-sm ${card.rarity === 'LEGENDARY' ? 'bg-yellow-500 text-black border-yellow-200' : card.rarity === 'EPIC' ? 'bg-purple-600 text-white border-purple-400' : card.rarity === 'RARE' ? 'bg-blue-600 text-white border-blue-400' : 'bg-gray-600 text-white border-gray-400'}`}>{card.rarity}</span>
                                         </div>
-                                        <div className="text-4xl md:text-5xl drop-shadow-xl">{card.count > 0 ? card.icon : '🔒'}</div>
-                                        <div className="text-xs md:text-sm font-black text-center bg-black/40 px-1 rounded w-full truncate">{card.name}</div>
+                                        {card.count > 0 && <span className="absolute top-1 right-1 z-30 text-[8px] font-bold bg-black/80 text-white px-1.5 rounded-full border border-white/20">x{card.count}</span>}
+                                        
+                                        {/* Full Card Icon */}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                            {renderCardSymbol(card)}
+                                        </div>
+                                        
+                                        {/* Legendary Shine */}
+                                        {card.rarity === 'LEGENDARY' && card.count > 0 && (
+                                             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-50 animate-shine pointer-events-none z-10"></div>
+                                        )}
+
+                                        <div className="absolute bottom-0 w-full bg-black/60 backdrop-blur-sm p-1 z-20 border-t border-white/10">
+                                            <div className="text-[10px] font-black text-center text-white truncate">{card.name}</div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

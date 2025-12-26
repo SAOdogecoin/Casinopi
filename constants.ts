@@ -1,24 +1,25 @@
 
-
-
 import { SymbolType, SymbolConfig, Payline, GameConfig, GameTheme, Mission, MissionType, PassReward, RewardType, Deck, Card, CardRarity, MissionFrequency } from './types';
 
 export const SPIN_DURATION = 1000; 
 export const REEL_DELAY = 150; 
 
 // --- Visual Styles ---
+// Opaque background for reels (Not transparent)
+const DEFAULT_REEL_BG = 'bg-[#150a25]';
+
 const REEL_BGS: Record<GameTheme, string> = {
-    NEON: 'bg-gradient-to-b from-[#0f0518] via-[#1a0b2e] to-[#0f0518]', 
-    EGYPT: 'bg-gradient-to-b from-[#1a0f00] via-[#291500] to-[#1a0f00]', 
-    DRAGON: 'bg-gradient-to-b from-[#1a0000] via-[#2b0505] to-[#1a0000]', 
-    PIRATE: 'bg-gradient-to-b from-[#081c24] via-[#0e2a35] to-[#081c24]',
-    SPACE: 'bg-gradient-to-b from-[#00001a] via-[#0d0d33] to-[#00001a]',
-    CANDY: 'bg-gradient-to-b from-[#2e0b1a] via-[#451228] to-[#2e0b1a]',
-    JUNGLE: 'bg-gradient-to-b from-[#052e16] via-[#064e3b] to-[#022c22]',
-    UNDERWATER: 'bg-gradient-to-b from-[#0c4a6e] via-[#0369a1] to-[#082f49]',
-    WESTERN: 'bg-gradient-to-b from-[#451a03] via-[#78350f] to-[#2e1005]',
-    SAMURAI: 'bg-gradient-to-b from-[#300505] via-[#500a0a] to-[#1a0000]',
-    PIGGY: 'bg-gradient-to-b from-[#500724] via-[#831843] to-[#500724]',
+    NEON: DEFAULT_REEL_BG, 
+    EGYPT: DEFAULT_REEL_BG, 
+    DRAGON: DEFAULT_REEL_BG, 
+    PIRATE: DEFAULT_REEL_BG,
+    SPACE: DEFAULT_REEL_BG,
+    CANDY: DEFAULT_REEL_BG,
+    JUNGLE: DEFAULT_REEL_BG,
+    UNDERWATER: DEFAULT_REEL_BG,
+    WESTERN: DEFAULT_REEL_BG,
+    SAMURAI: DEFAULT_REEL_BG,
+    PIGGY: DEFAULT_REEL_BG,
 };
 
 // --- Games Configuration ---
@@ -217,14 +218,14 @@ const SYMBOL_MAP: Record<GameTheme, Record<SymbolType, string>> = {
 };
 
 const TILE_BGS = {
-    TRANSPARENT: '', 
-    GREEN: 'bg-gradient-to-b from-emerald-700 to-emerald-900 shadow-[0_4px_0_rgb(6,78,59)]',
-    BLUE: 'bg-gradient-to-b from-blue-700 to-blue-900 shadow-[0_4px_0_rgb(30,58,138)]',
-    PURPLE: 'bg-gradient-to-b from-purple-700 to-purple-900 shadow-[0_4px_0_rgb(88,28,135)]',
-    RED: 'bg-gradient-to-b from-red-700 to-red-900 shadow-[0_4px_0_rgb(127,29,29)]',
-    YELLOW: 'bg-gradient-to-b from-yellow-600 to-yellow-800 shadow-[0_4px_0_rgb(161,98,7)]',
-    WILD: 'bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-600 shadow-[0_4px_0_rgb(180,83,9)]',
-    SCATTER: 'bg-gradient-to-b from-indigo-600 to-indigo-900 shadow-[0_4px_0_rgb(49,46,129)]',
+    TRANSPARENT: 'bg-transparent', 
+    GREEN: 'bg-black/30',
+    BLUE: 'bg-black/30',
+    PURPLE: 'bg-black/30',
+    RED: 'bg-black/30',
+    YELLOW: 'bg-black/30',
+    WILD: 'bg-black/50',
+    SCATTER: 'bg-black/50',
 };
 
 const getThemeFont = (theme: GameTheme) => {
@@ -352,7 +353,7 @@ const GENERATE_SCALES = () => {
     const bets: number[] = [];
     const steps = 30; 
     const minBet = 10000; 
-    const maxBet = 1500000000000; 
+    const maxBet = 1000000000000000; // Increased to 1 Quadrillion (1Q)
     const logMin = Math.log(minBet);
     const logMax = Math.log(maxBet);
     const scaleFactor = (logMax - logMin) / (steps - 1);
@@ -360,10 +361,11 @@ const GENERATE_SCALES = () => {
     for (let i = 0; i < steps; i++) {
         const rawValue = Math.exp(logMin + (i * scaleFactor));
         let rounded = rawValue;
-        if (rawValue > 100000000000) rounded = Math.round(rawValue / 100000000000) * 100000000000; 
+        if (rawValue > 1000000000000) rounded = Math.round(rawValue / 1000000000000) * 1000000000000; 
+        else if (rawValue > 100000000000) rounded = Math.round(rawValue / 100000000000) * 100000000000; 
         else if (rawValue > 1000000000) rounded = Math.round(rawValue / 1000000000) * 1000000000; 
         else if (rawValue > 1000000) rounded = Math.round(rawValue / 1000000) * 1000000; 
-        else if (rawValue > 100000) rounded = Math.round(rawValue / 10000) * 10000; 
+        else if (rawValue > 10000) rounded = Math.round(rawValue / 10000) * 10000; 
         else rounded = Math.round(rawValue / 1000) * 1000;
         if (i === steps - 1) rounded = maxBet;
         bets.push(rounded);
@@ -373,22 +375,20 @@ const GENERATE_SCALES = () => {
 const SCALES = GENERATE_SCALES();
 export const GET_ALL_BETS = () => SCALES;
 export const MAX_BET_BY_LEVEL = (level: number): number => {
-    // Doubled max bet relative to level compared to previous
     const index = Math.min(Math.floor(level), SCALES.length - 1);
     return SCALES[index];
 };
 
 export const CALCULATE_TIME_BONUS = (level: number): number => {
-    // 50,000 * Level as base reward
-    // More aggressive scaling
-    return Math.max(50000, 100000 * Math.pow(level, 1.1));
+    return Math.floor(50000000 * Math.pow(Math.max(1, level), 1.5));
 };
 
 export const SCALE_COIN_REWARD = (base: number, level: number): number => {
-    return Math.floor(base * (1 + (level * 0.1)));
+    return Math.floor(base * 1000 * Math.max(1, level * 2));
 };
 
 export const formatNumber = (num: number): string => {
+    if (num >= 1000000000000000) return (num / 1000000000000000).toFixed(1).replace(/\.0$/, '') + 'Q';
     if (num >= 1000000000000) return (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + 'T';
     if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
@@ -417,7 +417,6 @@ export const formatTime = (ms: number): string => {
 };
 
 // --- Mission & Battle Pass Generators ---
-// 5x Rewards for Missions, Extra multiplier for Win/Bet coins
 const MISSION_COIN_MULTIPLIER = 5; 
 
 export const GENERATE_REPLACEMENT_MISSION = (level: number, frequency: MissionFrequency): Mission => {
@@ -457,7 +456,6 @@ export const GENERATE_REPLACEMENT_MISSION = (level: number, frequency: MissionFr
 
     let target = base;
     if (type === MissionType.WIN_COINS || type === MissionType.BET_COINS) {
-            // Reduced to 2.5x (1/4 of previous 10x)
             target = Math.floor(base * multiplier * 2.5);
             if (frequency === 'MONTHLY') target *= 10; 
     } else if (type === MissionType.SPIN_COUNT && frequency === 'DAILY') {
@@ -468,10 +466,9 @@ export const GENERATE_REPLACEMENT_MISSION = (level: number, frequency: MissionFr
     target = Math.ceil(target * scale);
 
     const baseXP = frequency === 'DAILY' ? 30 : frequency === 'WEEKLY' ? 1500 : 8000;
-    const xpReward = Math.floor(baseXP * (1 + (level * 0.02)) * scale);
+    const xpReward = Math.floor(baseXP * (1 + (level * 0.02)) * scale) * 2;
     
-    // 1 Million Coins per 10 XP
-    const coinReward = Math.floor((xpReward / 10) * 1000000);
+    const coinReward = Math.floor((xpReward) * 10000000);
 
     return {
         id: `${frequency.toLowerCase()}-${Date.now()}-${Math.floor(Math.random()*1000)}`,
@@ -498,14 +495,12 @@ export const GENERATE_DAILY_MISSIONS = (playerLevel: number): Mission[] => {
         { type: MissionType.BIG_WIN_COUNT, base: 10, desc: "Hit Big Wins" },
     ];
 
-    // 10 per day
     for (let i = 0; i < 10; i++) {
         const t = templates[i % templates.length];
         const scale = 1 + (Math.floor(i / 4) * 0.5); 
 
         let target = t.base;
         if (t.type === MissionType.WIN_COINS || t.type === MissionType.BET_COINS) {
-             // Reduced to 2.5x (1/4 of previous 10x)
              target = Math.floor(t.base * multiplier * scale * 2.5);
         } else if (t.type === MissionType.SPIN_COUNT) {
              target = (t.base + (playerLevel * 5)) * scale; 
@@ -514,8 +509,7 @@ export const GENERATE_DAILY_MISSIONS = (playerLevel: number): Mission[] => {
         }
         
         const xpReward = 30 + (i * 15);
-        // 1m per 10 xp
-        const coinReward = Math.floor((xpReward / 10) * 1000000);
+        const coinReward = Math.floor((xpReward) * 10000000);
         
         missions.push({
             id: `daily-${Date.now()}-${i}`,
@@ -537,7 +531,6 @@ export const GENERATE_DAILY_MISSIONS = (playerLevel: number): Mission[] => {
 export const GENERATE_WEEKLY_MISSIONS = (playerLevel: number): Mission[] => {
     const missions: Mission[] = [];
     
-    // 6 per week
     const templates = [
         { type: MissionType.SPIN_COUNT, base: 2500, desc: "Weekly: Spin the reels" },
         { type: MissionType.WIN_COINS, base: 500000000, desc: "Weekly: Win total coins" },
@@ -550,204 +543,179 @@ export const GENERATE_WEEKLY_MISSIONS = (playerLevel: number): Mission[] => {
     templates.forEach((t, i) => {
         let target = t.base;
         if (t.type === MissionType.WIN_COINS || t.type === MissionType.BET_COINS) {
-             // Reduced to 2.5x (1/4 of previous 10x)
              target = Math.floor(t.base * Math.max(1, playerLevel / 2) * 2.5);
+        } else if (t.type === MissionType.SPIN_COUNT) {
+             target = t.base + (playerLevel * 50);
         }
         
         const xpReward = 1500 + (i * 500);
-        const coinReward = Math.floor((xpReward / 10) * 1000000);
+        const coinReward = Math.floor((xpReward) * 10000000);
 
         missions.push({
             id: `weekly-${Date.now()}-${i}`,
             type: t.type,
             description: `${t.desc} ${formatNumber(target)}${t.type === MissionType.WIN_COINS || t.type === MissionType.BET_COINS ? '' : ' times'}`,
-            target: target,
+            target: Math.floor(target),
             current: 0,
             xpReward: xpReward,
-            coinReward: coinReward, 
+            coinReward: coinReward,
             completed: false,
             claimed: false,
             frequency: 'WEEKLY'
         });
     });
+
     return missions;
 };
 
 export const GENERATE_MONTHLY_MISSIONS = (playerLevel: number): Mission[] => {
-    const missions: Mission[] = [];
+     const missions: Mission[] = [];
     
-    // 6 per month
     const templates = [
         { type: MissionType.SPIN_COUNT, base: 12500, desc: "Monthly: Spin the reels" },
         { type: MissionType.WIN_COINS, base: 5000000000, desc: "Monthly: Win total coins" },
         { type: MissionType.LEVEL_UP, base: 50, desc: "Monthly: Level Up" },
-        { type: MissionType.BET_COINS, base: 10000000000, desc: "Monthly: Bet total coins" },
-        { type: MissionType.SPIN_COUNT, base: 20000, desc: "Monthly: Spin the reels" },
-        { type: MissionType.BIG_WIN_COUNT, base: 1000, desc: "Monthly: Hit Big Wins" },
     ];
 
     templates.forEach((t, i) => {
         let target = t.base;
-        if (t.type === MissionType.WIN_COINS || t.type === MissionType.BET_COINS) {
-             // Reduced to 2.5x (1/4 of previous 10x)
-             target = Math.floor(t.base * 10 * Math.max(1, playerLevel) * 2.5);
+         if (t.type === MissionType.WIN_COINS) {
+             target = Math.floor(t.base * Math.max(1, playerLevel) * 2.5);
         }
         
         const xpReward = 8000 + (i * 2000);
-        const coinReward = Math.floor((xpReward / 10) * 1000000);
+        const coinReward = Math.floor((xpReward) * 10000000);
 
         missions.push({
             id: `monthly-${Date.now()}-${i}`,
             type: t.type,
-            description: `${t.desc} ${formatNumber(target)}${t.type === MissionType.WIN_COINS || t.type === MissionType.BET_COINS ? '' : ' times'}`,
-            target: target,
+            description: `${t.desc} ${formatNumber(target)}${t.type === MissionType.WIN_COINS ? '' : ' times'}`,
+            target: Math.floor(target),
             current: 0,
             xpReward: xpReward,
-            coinReward: coinReward, 
+            coinReward: coinReward,
             completed: false,
             claimed: false,
             frequency: 'MONTHLY'
         });
     });
+
     return missions;
-};
+}
 
 export const GENERATE_PASS_REWARDS = (): PassReward[] => {
     const rewards: PassReward[] = [];
-    for (let i = 1; i <= 50; i++) {
-        // FREE TIER
-        // Pattern: 5 Coins, then 1 Special
-        let typeFree: RewardType = 'COINS';
-        let valueFree = 100000 * i * 5; 
-        let labelFree = formatNumber(valueFree);
+    let freeCoinCount = 0;
+    let premiumCoinCount = 0;
 
-        if (i === 40) {
-            typeFree = 'XP_BOOST';
-            valueFree = 2;
-            labelFree = "2x XP";
-        } else if (i % 6 === 0) {
-            // Special Item every 6th level
-            const variant = (i / 6) % 3;
-            if (variant === 0) {
-                 typeFree = 'DIAMONDS';
-                 valueFree = i * 2;
-                 labelFree = `${valueFree} 💎`;
-            } else if (variant === 1) {
-                 typeFree = 'CREDIT_BACK';
-                 valueFree = 10;
-                 labelFree = "+10 Credits";
-            } else {
-                 typeFree = 'PICKS';
-                 valueFree = 2;
-                 labelFree = "+2 Picks";
-            }
+    for(let i=1; i<=50; i++) {
+        // Free Tier
+        const isFreeCoin = i % 2 !== 0;
+        let freeValue = 5; // Default for non-coins
+        
+        if (isFreeCoin) {
+            // Logic: 1/4 of previous scale. Increase only every 5 coin rewards.
+            // 1/4 of previous 100M base = 25,000,000.
+            const tier = Math.floor(freeCoinCount / 5) + 1;
+            freeValue = 25000000 * tier;
+            freeCoinCount++;
         }
 
         rewards.push({
             id: `free-${i}`,
             level: i,
-            type: typeFree,
-            value: valueFree,
-            label: labelFree,
-            claimed: false,
-            tier: 'FREE'
+            tier: 'FREE',
+            type: isFreeCoin ? 'COINS' : 'CREDIT_BACK',
+            value: freeValue,
+            label: isFreeCoin ? `${formatNumber(freeValue)}` : '5 Credits',
+            claimed: false
         });
 
-        // PREMIUM TIER
-        let typePrem: RewardType = 'COINS';
-        let valuePrem = valueFree * 10; 
-        let labelPrem = formatNumber(valuePrem);
+        // Premium Tier
+        const isPremCoin = i % 3 === 0;
+        const isPremGem = i % 5 === 0;
+        const isPremPick = i % 4 === 0;
+        
+        let type: RewardType = 'COINS';
+        // Logic: 1/4 of previous scale. Increase only every 5 coin rewards.
+        // 1/4 of previous 500M base = 125,000,000.
+        const tier = Math.floor(premiumCoinCount / 5) + 1;
+        let value = 125000000 * tier;
+        
+        let label = formatNumber(value);
 
-        if (i % 20 === 0) {
-            // Premium XP Boost every 20 levels (20, 40)
-            typePrem = 'XP_BOOST';
-            valuePrem = 5; 
-            labelPrem = "5x XP";
-        } else if (i % 6 === 0) {
-            // Special Item matching free tier flow but boosted
-            const variant = (i / 6) % 3;
-            if (variant === 0) {
-                 typePrem = 'DIAMONDS';
-                 valuePrem = (i * 2) * 5; 
-                 labelPrem = `${valuePrem} 💎`;
-            } else if (variant === 1) {
-                 typePrem = 'PICKS';
-                 valuePrem = 5;
-                 labelPrem = "+5 Picks";
-            } else {
-                 typePrem = 'CREDIT_BACK';
-                 valuePrem = 50;
-                 labelPrem = "+50 Credits";
-            }
+        if (isPremGem) {
+            type = 'DIAMONDS';
+            value = 20 * Math.floor(i / 5);
+            label = `${value} Gems`;
+        } else if (isPremPick) {
+            type = 'PICKS';
+            value = Math.floor(i/10) + 1;
+            label = `${value} Picks`;
+        } else if (!isPremCoin) {
+             type = 'XP_BOOST';
+             value = 2;
+             label = '2x Boost';
+        } else {
+            // Increment only if it's actually a coin reward
+            premiumCoinCount++;
         }
 
         rewards.push({
             id: `prem-${i}`,
             level: i,
-            type: typePrem,
-            value: valuePrem,
-            label: labelPrem,
-            claimed: false,
-            tier: 'PREMIUM'
+            tier: 'PREMIUM',
+            type: type,
+            value: value,
+            label: label,
+            claimed: false
         });
     }
     return rewards;
 };
 
-// --- Card Collection Generators ---
-
-export const DUPLICATE_CREDIT_VALUES: Record<CardRarity, number> = {
-    COMMON: 5,
-    RARE: 10,
-    EPIC: 50,
-    LEGENDARY: 100
-};
-
-// Pack Costs in Pack Credits - 1 Card Per Draw
-export const PACK_COSTS = {
-    BASIC: { creditCost: 1, cardCount: 1 },
-    SUPER: { creditCost: 2, cardCount: 1 },
-    MEGA: { creditCost: 5, cardCount: 1 },
-    ULTRA: { creditCost: 10, cardCount: 1 },
-};
-
-const determineRarity = (symbol: SymbolType): CardRarity => {
-    if ([SymbolType.SCATTER].includes(symbol)) return 'LEGENDARY';
-    if ([SymbolType.WILD, SymbolType.SEVEN].includes(symbol)) return 'EPIC';
-    if ([SymbolType.BAR, SymbolType.BELL, SymbolType.CHERRY].includes(symbol)) return 'RARE';
-    return 'COMMON';
-};
-
-const getSymbolDescription = (symbol: SymbolType): string => {
-    switch(symbol) {
-        case SymbolType.SCATTER: return "Triggers the bonus feature.";
-        case SymbolType.WILD: return "Substitutes for other symbols.";
-        case SymbolType.SEVEN: return "A classic lucky number.";
-        case SymbolType.CHERRY: return "Sweet and valuable.";
-        case SymbolType.BAR: return "High value stacked symbol.";
-        case SymbolType.BELL: return "Rings in the wins.";
-        case SymbolType.GRAPE: return "Juicy rewards.";
-        default: return "A standard reel symbol.";
-    }
+export const DUPLICATE_CREDIT_VALUES: Record<string, number> = {
+    'COMMON': 10,
+    'RARE': 50,
+    'EPIC': 200,
+    'LEGENDARY': 1000
 };
 
 export const GENERATE_DECKS = (): Deck[] => {
     return GAMES_CONFIG.map(game => {
-        const symbols = SYMBOL_MAP[game.theme];
-        const cards: Card[] = Object.values(SymbolType).map(type => {
-            const icon = symbols[type];
-            if (!icon) return null;
-            
+        const symbolMap = GET_SYMBOLS(game.theme);
+        
+        const definitions: { type: SymbolType, rarity: CardRarity }[] = [
+            { type: SymbolType.TEN, rarity: 'COMMON' },
+            { type: SymbolType.JACK, rarity: 'COMMON' },
+            { type: SymbolType.QUEEN, rarity: 'COMMON' },
+            { type: SymbolType.KING, rarity: 'COMMON' },
+            { type: SymbolType.ACE, rarity: 'RARE' },
+            { type: SymbolType.GRAPE, rarity: 'RARE' },
+            { type: SymbolType.BELL, rarity: 'RARE' },
+            { type: SymbolType.BAR, rarity: 'EPIC' },
+            { type: SymbolType.CHERRY, rarity: 'EPIC' },
+            { type: SymbolType.SEVEN, rarity: 'LEGENDARY' },
+            { type: SymbolType.WILD, rarity: 'LEGENDARY' },
+            { type: SymbolType.SCATTER, rarity: 'LEGENDARY' },
+        ];
+
+        const cards: Card[] = definitions.map((def) => {
+            const symConfig = symbolMap[def.type];
+            let displayName = def.type.toString();
+            if (def.type === SymbolType.TEN) displayName = '10';
+            else displayName = displayName.charAt(0) + displayName.slice(1).toLowerCase();
+
             return {
-                id: `${game.id}-${type}`,
-                symbolType: type,
-                name: type.charAt(0) + type.slice(1).toLowerCase(),
-                rarity: determineRarity(type),
-                count: 0, // Start owned 0
-                icon: icon,
-                description: getSymbolDescription(type)
+                id: `${game.id}-${def.type}`,
+                symbolType: def.type,
+                name: displayName,
+                rarity: def.rarity,
+                count: 0,
+                icon: symConfig.icon,
+                description: `${def.rarity} ${game.name} Card`
             };
-        }).filter(c => c !== null) as Card[];
+        });
 
         return {
             gameId: game.id,
@@ -761,11 +729,18 @@ export const GENERATE_DECKS = (): Deck[] => {
 };
 
 export const DAILY_LOGIN_REWARDS = [
-    { day: 1, coins: 50000, gems: 0 },
-    { day: 2, coins: 100000, gems: 0 },
-    { day: 3, coins: 250000, gems: 5 },
-    { day: 4, coins: 500000, gems: 0 },
-    { day: 5, coins: 1000000, gems: 10 },
-    { day: 6, coins: 2500000, gems: 20 },
-    { day: 7, coins: 10000000, gems: 50 }
+    { day: 1, coins: 500000000, gems: 0 },
+    { day: 2, coins: 1000000000, gems: 0 },
+    { day: 3, coins: 2500000000, gems: 10 },
+    { day: 4, coins: 5000000000, gems: 20 },
+    { day: 5, coins: 10000000000, gems: 50 },
+    { day: 6, coins: 25000000000, gems: 100 },
+    { day: 7, coins: 100000000000, gems: 500 },
 ];
+
+export const PACK_COSTS = {
+    BASIC: { creditCost: 15, cardCount: 1 },
+    SUPER: { creditCost: 30, cardCount: 1 },
+    MEGA: { creditCost: 60, cardCount: 1 },
+    ULTRA: { creditCost: 120, cardCount: 1 },
+};

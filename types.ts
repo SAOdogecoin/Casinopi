@@ -1,5 +1,4 @@
 
-
 export enum SymbolType {
   TEN = 'TEN',
   JACK = 'JACK',
@@ -90,7 +89,7 @@ export interface QuestState {
   picks: number; 
   wildStage: number; // Separated Stage
   diceStage: number; // Separated Stage
-  max: 60;
+  max: number;
   dicePosition: number; 
   activeGame: 'NONE' | 'WILD' | 'DICE';
   wildGrid: WildGridCell[]; // Persistence for Wild Quest
@@ -183,5 +182,10 @@ export interface DailyLoginState {
     lastClaimTime: number;
 }
 
-// Key is Game ID, Value is Map of SymbolType to ImageURL (Base64)
-export type CustomAssetMap = Record<string, Record<string, string>>;
+// CustomAssetMap
+// 'global' key holds UI overrides
+// GameIDs hold symbol overrides + 'thumbnail' + 'background'
+export interface CustomAssetMap {
+    global?: Record<string, string>;
+    [key: string]: Record<string, string> | undefined;
+}

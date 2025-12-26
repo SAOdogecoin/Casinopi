@@ -1,29 +1,29 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SymbolType, GameStatus, PlayerState, WinData, QuestState, MiniGameReward, GameConfig, MissionState, MissionType, PassReward, Mission, Deck, Card, DailyLoginState, WildGridCell, CustomAssetMap } from './types';
-import { GAMES_CONFIG, GET_DYNAMIC_WEIGHTS, SPIN_DURATION, REEL_DELAY, INITIAL_BALANCE, GET_PAYLINES, XP_BASE_REQ, GET_ALL_BETS, MAX_BET_BY_LEVEL, formatNumber, formatCommaNumber, formatWinNumber, GET_SYMBOLS, AUTO_SPIN_DELAY, GENERATE_DAILY_MISSIONS, GENERATE_WEEKLY_MISSIONS, GENERATE_MONTHLY_MISSIONS, GENERATE_PASS_REWARDS, INITIAL_GEMS, PICKS_COST_IN_CREDITS, GENERATE_DECKS, CALCULATE_TIME_BONUS, DUPLICATE_CREDIT_VALUES, GENERATE_REPLACEMENT_MISSION, DAILY_LOGIN_REWARDS, PACK_COSTS, SCALE_COIN_REWARD } from './constants';
-import { Reel } from './components/Reel';
-import { WinPopup } from './components/WinPopup';
-import { PaylinesOverlay } from './components/PaylinesOverlay';
-import { LeftSidebar } from './components/LeftSidebar';
-import { ShopModal } from './components/ShopModal';
-import { MiniGameModal } from './components/MiniGameModal';
-import { Lobby } from './components/Lobby';
-import { FreeSpinsWonPopup } from './components/FreeSpinsWonPopup';
-import { LevelUpToast } from './components/LevelUpToast';
-import { FreeSpinSummary } from './components/FreeSpinSummary';
-import { BankruptcyModal } from './components/BankruptcyModal';
-import { MissionPassModal } from './components/MissionPassModal';
-import { CardCollectionModal } from './components/CardCollectionModal';
-import { SimpleCelebrationModal } from './components/SimpleCelebrationModal';
-import { TimeBonusModal } from './components/TimeBonusModal';
-import { LoginBonusModal } from './components/LoginBonusModal';
-import { JackpotTicker } from './components/JackpotTicker';
-import { PiggyBankModal } from './components/PiggyBankModal';
-import { FeatureUnlockModal } from './components/FeatureUnlockModal';
-import { SettingsModal } from './components/SettingsModal';
-import { audioService } from './services/audioService';
-import { saveAssetsToDB, loadAssetsFromDB } from './services/storageService';
+import { SymbolType, GameStatus, PlayerState, WinData, QuestState, MiniGameReward, GameConfig, MissionState, MissionType, PassReward, Mission, Deck, Card, DailyLoginState, WildGridCell, CustomAssetMap } from '../types';
+import { GAMES_CONFIG, GET_DYNAMIC_WEIGHTS, SPIN_DURATION, REEL_DELAY, INITIAL_BALANCE, GET_PAYLINES, XP_BASE_REQ, GET_ALL_BETS, MAX_BET_BY_LEVEL, formatNumber, formatCommaNumber, formatWinNumber, GET_SYMBOLS, AUTO_SPIN_DELAY, GENERATE_DAILY_MISSIONS, GENERATE_WEEKLY_MISSIONS, GENERATE_MONTHLY_MISSIONS, GENERATE_PASS_REWARDS, INITIAL_GEMS, PICKS_COST_IN_CREDITS, GENERATE_DECKS, CALCULATE_TIME_BONUS, DUPLICATE_CREDIT_VALUES, GENERATE_REPLACEMENT_MISSION, DAILY_LOGIN_REWARDS, PACK_COSTS, SCALE_COIN_REWARD } from '../constants';
+import { Reel } from './Reel';
+import { WinPopup } from './WinPopup';
+import { PaylinesOverlay } from './PaylinesOverlay';
+import { LeftSidebar } from './LeftSidebar';
+import { ShopModal } from './ShopModal';
+import { MiniGameModal } from './MiniGameModal';
+import { Lobby } from './Lobby';
+import { FreeSpinsWonPopup } from './FreeSpinsWonPopup';
+import { LevelUpToast } from './LevelUpToast';
+import { FreeSpinSummary } from './FreeSpinSummary';
+import { BankruptcyModal } from './BankruptcyModal';
+import { MissionPassModal } from './MissionPassModal';
+import { CardCollectionModal } from './CardCollectionModal';
+import { SimpleCelebrationModal } from './SimpleCelebrationModal';
+import { TimeBonusModal } from './TimeBonusModal';
+import { LoginBonusModal } from './LoginBonusModal';
+import { JackpotTicker } from './JackpotTicker';
+import { PiggyBankModal } from './PiggyBankModal';
+import { FeatureUnlockModal } from './FeatureUnlockModal';
+import { SettingsModal } from './SettingsModal';
+import { audioService } from '../services/audioService';
+import { saveAssetsToDB, loadAssetsFromDB } from '../services/storageService';
 
 // Interface for persisted game state
 interface SavedGameState {
@@ -161,11 +161,22 @@ const App: React.FC = () => {
   useEffect(() => {
       loadAssetsFromDB().then((assets) => {
           setCustomAssets(assets);
+          // Set audio service custom sound if present
+          if (assets.global?.WIN_SOUND) {
+              audioService.setCustomWinSound(assets.global.WIN_SOUND);
+          }
       });
   }, []);
 
   // Save to StorageService whenever it changes (debounced)
   useEffect(() => {
+    // Update audio service if sound changes
+    if (customAssets.global?.WIN_SOUND) {
+        audioService.setCustomWinSound(customAssets.global.WIN_SOUND);
+    } else {
+        audioService.setCustomWinSound(null);
+    }
+
     const timer = setTimeout(() => {
         // Only save if there is data to prevent wiping on load fail
         if (Object.keys(customAssets).length > 0) {
@@ -387,6 +398,16 @@ const App: React.FC = () => {
               };
           }
       });
+  };
+
+  // Allow setting direct values (for settings like Full/Column mode)
+  const handleUpdateAssetValue = (scope: string, key: string, value: string) => {
+        setCustomAssets(prev => {
+            const newAssets = { ...prev };
+            let target: Record<string, string> = newAssets[scope] ? { ...newAssets[scope] } : {};
+            target[key] = value;
+            return { ...prev, [scope]: target };
+        });
   };
 
   const handleResetAssets = (gameId: string) => {
@@ -749,6 +770,36 @@ const App: React.FC = () => {
       audioService.playWinBig();
   };
 
+  const getDeckReward = (level: number) => {
+      return (1000000 + (level * 500000)) * 100; 
+  };
+  const getGrandAlbumReward = (level: number) => {
+      return (10000000 + (level * 2000000)) * 10000;
+  };
+
+  const getRandomCard = () => {
+      const allCards: { deckId: string, cardIndex: number, card: Card }[] = [];
+      decks.forEach(d => d.cards.forEach((c, idx) => allCards.push({ deckId: d.gameId, cardIndex: idx, card: c })));
+      const randomPick = allCards[Math.floor(Math.random() * allCards.length)];
+      
+      const deck = decks.find(d => d.gameId === randomPick.deckId)!;
+      const card = deck.cards[randomPick.cardIndex];
+      
+      // Update deck state directly
+      const newDecks = decks.map(d => {
+          if (d.gameId === randomPick.deckId) {
+              const newCards = d.cards.map((c, i) => i === randomPick.cardIndex ? { ...c, count: c.count + 1 } : c);
+              const completed = newCards.every(c => c.count > 0);
+              return { ...d, cards: newCards, isCompleted: completed };
+          }
+          return d;
+      });
+      setDecks(newDecks);
+      
+      setCelebrationMsg(`Found Card: ${card.name}!`);
+      audioService.playWinSmall();
+  };
+
   const generateSmartGrid = useCallback(() => {
       const cols = selectedGame.reels;
       const rows = selectedGame.rows;
@@ -993,6 +1044,12 @@ const App: React.FC = () => {
       setSpinsWithoutBonus(prev => prev + 1);
       updateMissions(MissionType.SPIN_COUNT, 1);
       updateMissions(MissionType.BET_COINS, currentBet);
+      
+      // Random Card Drop - 5% Chance
+      if (player.level >= 30 && Math.random() < 0.05) {
+          setTimeout(() => getRandomCard(), 500);
+      }
+
     } else {
         setFreeSpinsRemaining(prev => prev - 1);
         updateMissions(MissionType.SPIN_COUNT, 1);
@@ -1570,6 +1627,14 @@ const App: React.FC = () => {
       backgroundColor: '#0a0015' // Fallback
   };
 
+  // Determine Reel Background logic
+  const reelBgMode = customAssets[selectedGame.id]?.reelBackgroundMode || 'COLUMN';
+  const customReelBg = customAssets[selectedGame.id]?.reelBackground;
+  
+  const reelContainerStyle = (reelBgMode === 'FULL' && customReelBg) 
+      ? { backgroundImage: `url(${customReelBg})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
+      : {};
+
   return (
     <div 
         className="w-full min-h-screen text-white font-body overflow-hidden flex flex-col transition-all duration-500"
@@ -1669,7 +1734,10 @@ const App: React.FC = () => {
                     {isHighLimit && <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-widest shadow-lg mt-1 inline-block">High Limit</span>}
                 </div>
                 <div className="flex gap-2 md:gap-4 w-full max-w-7xl items-center justify-center h-full">
-                    <div className={`relative z-10 bg-black/60 p-2 md:p-4 rounded-xl shadow-2xl backdrop-blur-sm flex gap-1 md:gap-2 w-full max-w-5xl mx-auto overflow-hidden h-full max-h-[55vh] md:max-h-[60vh] aspect-video ${isHighLimit ? 'shadow-[0_0_30px_rgba(220,38,38,0.3)]' : ''}`}>
+                    <div 
+                        className={`relative z-10 p-2 md:p-4 rounded-xl shadow-2xl backdrop-blur-sm flex gap-1 md:gap-2 w-full max-w-5xl mx-auto overflow-hidden h-full max-h-[55vh] md:max-h-[60vh] aspect-video ${isHighLimit ? 'shadow-[0_0_30px_rgba(220,38,38,0.3)]' : ''} ${!customReelBg || reelBgMode !== 'FULL' ? 'bg-black/60' : ''}`}
+                        style={reelContainerStyle}
+                    >
                         {grid.map((col, i) => (
                             <Reel 
                                 key={i} 
@@ -1684,6 +1752,7 @@ const App: React.FC = () => {
                                 gameConfig={selectedGame} 
                                 isScatterShowcase={status === GameStatus.SCATTER_SHOWCASE} 
                                 customAssets={customAssets[selectedGame.id] || {}}
+                                reelBgMode={reelBgMode}
                             />
                         ))}
                         <PaylinesOverlay winData={winData} rowCount={selectedGame.rows} />
@@ -1800,6 +1869,7 @@ const App: React.FC = () => {
         onUploadAsset={handleUploadAsset}
         onResetAssets={handleResetAssets}
         onImportAssets={handleImportAssets}
+        onUpdateAssetValue={handleUpdateAssetValue}
       />
 
       <ShopModal 
@@ -1838,13 +1908,13 @@ const App: React.FC = () => {
         diceStage={quest.diceStage}
         dicePosition={quest.dicePosition}
         activeGame={quest.activeGame}
-        savedGrid={quest.wildGrid} // Pass saved grid
+        savedGrid={quest.wildGrid} 
         onSelectMode={handleQuestModeSelect}
         onBuyPicks={handleBuyPicks} 
         onPickTile={handleMiniGamePick} 
         onBatchPick={handleBatchPick} 
         onStageComplete={(bonusCoins, bonusDiamonds) => handleStageComplete(quest.activeGame === 'DICE' ? 'DICE' : 'WILD', bonusCoins, bonusDiamonds)} 
-        onGridUpdate={handleWildGridUpdate} // Update grid
+        onGridUpdate={handleWildGridUpdate}
         onDiceRoll={handleDiceRoll}
         onClose={() => setActiveModal('NONE')} 
         playerLevel={player.level}
@@ -1879,7 +1949,6 @@ const App: React.FC = () => {
         icon={featureUnlockData.icon} 
         description={featureUnlockData.description} 
         onOpenFeature={() => { 
-            // Correctly trigger the action passed
             featureUnlockData.action();
         }} 
         onClose={() => setActiveModal('NONE')} 

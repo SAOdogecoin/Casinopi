@@ -2,14 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import { audioService } from '../services/audioService';
 import { formatCommaNumber } from '../constants';
+import { CustomAssetMap } from '../types';
 
 interface WinPopupProps {
     amount: number;
     type: string;
     onComplete: () => void;
+    customAssets?: CustomAssetMap;
 }
 
-export const WinPopup: React.FC<WinPopupProps> = ({ amount, type, onComplete }) => {
+export const WinPopup: React.FC<WinPopupProps> = ({ amount, type, onComplete, customAssets }) => {
     const [displayAmount, setDisplayAmount] = useState(0);
     
     useEffect(() => {
@@ -62,21 +64,23 @@ export const WinPopup: React.FC<WinPopupProps> = ({ amount, type, onComplete }) 
 
     const getTheme = (tier: string) => {
         switch(tier) {
-            case 'ULTIMATE WIN': return { color: 'text-yellow-400', title: tier };
-            case 'MEGA WIN': return { color: 'text-red-500', title: tier };
-            case 'EPIC WIN': return { color: 'text-purple-500', title: tier };
-            case 'GREAT WIN': return { color: 'text-blue-500', title: tier };
-            default: return { color: 'text-green-400', title: tier };
+            case 'ULTIMATE WIN': return { color: 'text-yellow-400', title: tier, key: 'WIN_ULTIMATE' };
+            case 'MEGA WIN': return { color: 'text-red-500', title: tier, key: 'WIN_MEGA' };
+            case 'EPIC WIN': return { color: 'text-purple-500', title: tier, key: 'WIN_EPIC' };
+            case 'GREAT WIN': return { color: 'text-blue-500', title: tier, key: 'WIN_BIG' };
+            case 'BIG WIN': return { color: 'text-green-400', title: tier, key: 'WIN_BIG' };
+            default: return { color: 'text-white', title: tier, key: 'WIN_BIG' };
         }
     };
 
     const theme = getTheme(type);
     const particleCount = getCoinCount(type);
+    const customImage = customAssets?.global?.[theme.key];
 
     return (
         <div 
             onClick={onComplete}
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-sm cursor-pointer overflow-hidden"
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md cursor-pointer overflow-hidden"
         >
             <style>{`
                 @keyframes coinFall {
@@ -86,21 +90,39 @@ export const WinPopup: React.FC<WinPopupProps> = ({ amount, type, onComplete }) 
                 }
             `}</style>
 
-            <div className="relative flex flex-col items-center z-20 w-full max-w-5xl p-4">
-                {/* Flat Title */}
-                <h2 className={`text-6xl md:text-9xl font-display font-black uppercase text-center tracking-tighter mb-8 ${theme.color}`}
-                    style={{ textShadow: '0 5px 0 #000, 0 10px 20px rgba(0,0,0,0.5)' }}
-                >
-                    {theme.title}
-                </h2>
+            <div className="relative flex flex-col items-center justify-center z-20 w-full h-full">
                 
-                {/* Amount - No container, just huge text with heavy shadow */}
-                <div className="text-7xl md:text-[9rem] font-mono font-black text-white transform scale-110"
-                     style={{ 
-                         textShadow: '0 0 10px #000, 0 0 20px #000, 0 5px 0 #000, 0 10px 10px rgba(0,0,0,0.5)',
-                         WebkitTextStroke: '2px black'
-                     }}>
-                    {formatCommaNumber(displayAmount)}
+                {/* Title / Banner - MASSIVE SCALE for Uploaded Assets */}
+                <div className="flex justify-center items-end w-full animate-pop-in relative z-10 p-4 shrink-0">
+                    {customImage ? (
+                        <img 
+                            src={customImage} 
+                            alt={theme.title} 
+                            // Scale 2.5 to make it huge as requested (5x logic application)
+                            className="w-full h-auto max-h-[70vh] object-contain drop-shadow-[0_10px_50px_rgba(0,0,0,0.8)] transform scale-[2.5]"
+                        />
+                    ) : (
+                        <h2 className={`text-[12vw] font-display font-black uppercase text-center tracking-tighter ${theme.color} drop-shadow-[0_10px_0_rgba(0,0,0,1)] leading-[0.8]`}
+                            style={{ 
+                                textShadow: '0 10px 0 #000, 0 10px 30px rgba(0,0,0,0.8)',
+                                WebkitTextStroke: '3px black'
+                            }}
+                        >
+                            {theme.title}
+                        </h2>
+                    )}
+                </div>
+                
+                {/* Amount - Adjusted to be just below the image with less extreme overlap to avoid hiding it */}
+                <div className="flex items-start justify-center w-full z-30 -mt-8 md:-mt-16 relative">
+                    <div className="text-[10vw] md:text-[8vw] font-mono font-black text-white text-center leading-none animate-bounce drop-shadow-[0_0_30px_rgba(0,0,0,1)]"
+                         style={{ 
+                             textShadow: '0 0 15px #000, 0 5px 0 #000, 0 0 10px black',
+                             WebkitTextStroke: '3px black',
+                             paintOrder: 'stroke fill'
+                         }}>
+                        {formatCommaNumber(displayAmount)}
+                    </div>
                 </div>
             </div>
 
@@ -108,7 +130,7 @@ export const WinPopup: React.FC<WinPopupProps> = ({ amount, type, onComplete }) 
             <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-10">
                 {[...Array(particleCount)].map((_, i) => (
                     <div key={i} 
-                            className="absolute text-3xl opacity-80"
+                            className="absolute text-3xl md:text-5xl opacity-80"
                             style={{
                                 left: `${Math.random() * 100}%`,
                                 top: `-10%`, 

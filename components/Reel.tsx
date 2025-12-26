@@ -16,6 +16,7 @@ interface ReelProps {
   gameConfig: GameConfig;
   isScatterShowcase?: boolean; 
   customAssets?: Record<string, string>;
+  reelBgMode?: string;
 }
 
 const getRandomSymbol = () => {
@@ -28,7 +29,7 @@ const getRandomSymbol = () => {
   return SymbolType.TEN;
 };
 
-export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping, stopDelay, duration, onStop, winningIndices, gameConfig, isScatterShowcase, customAssets = {} }) => {
+export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping, stopDelay, duration, onStop, winningIndices, gameConfig, isScatterShowcase, customAssets = {}, reelBgMode = 'COLUMN' }) => {
   const [strip, setStrip] = useState<SymbolType[]>([]);
   const [landing, setLanding] = useState(false); 
   const SYMBOL_CONFIGS = GET_SYMBOLS(gameConfig.theme);
@@ -43,7 +44,7 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
   useEffect(() => {
     if (spinning && !stopping) {
       setLanding(false);
-      setStrip(Array(VISIBLE_ROWS * 4).fill(null).map(getRandomSymbol));
+      setStrip(Array(VISIBLE_ROWS * 2).fill(null).map(getRandomSymbol));
     }
   }, [spinning, stopping, VISIBLE_ROWS]);
 
@@ -52,8 +53,6 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
     if (stopping && !landing) {
         const timer = setTimeout(() => {
             setLanding(true); 
-            
-            // Set final strip: Random symbols on top + Final symbols at bottom
             const finalStrip = [
                 ...Array(VISIBLE_ROWS).fill(null).map(getRandomSymbol),
                 ...symbols 
@@ -67,7 +66,6 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
   // Effect 3: Handle Animation Completion (Signal Parent)
   useEffect(() => {
       if (stopping && landing) {
-          // Delay to allow bounce animation to play before notifying parent
           const delay = duration > 800 ? 400 : 200; 
           const timer = setTimeout(() => {
               onStop();
@@ -77,52 +75,64 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
   }, [stopping, landing, onStop, duration]);
 
   // --- Layout & Animation Logic ---
-
-  // 1. Determine Content
-  // During Spin: We double the strip to create a seamless loop for the slide animation
   const renderStrip = (!landing && spinning) ? [...strip, ...strip] : strip;
-  
-  // 2. Calculate Container Heights
-  // We size the inner container so that 1 "View Height" = VISIBLE_ROWS items.
-  // Total items / VISIBLE_ROWS = Multiplier of View Height.
   const totalItems = renderStrip.length;
   const containerHeightPercent = (totalItems / VISIBLE_ROWS) * 100;
   
-  // 3. Calculate Scroll Offset (TranslateY)
   let translateY = '0%';
-  
   if (landing) {
       const rowsToHide = totalItems - VISIBLE_ROWS;
       const shiftPercent = (rowsToHide / totalItems) * 100;
       translateY = `-${shiftPercent}%`;
   } 
   
+  // Background Style
+  const hasColumnBg = reelBgMode === 'COLUMN' && customAssets['reelBackground'];
+  const containerStyle = {
+      aspectRatio: `1 / ${gameConfig.rows}`,
+      backgroundImage: hasColumnBg ? `url(${customAssets['reelBackground']})` : undefined,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundColor: reelBgMode === 'FULL' || hasColumnBg ? 'transparent' : undefined
+  };
+
+  // 'overflow-hidden' on Y is crucial for scrolling illusion.
+  // 'overflow-x-visible' allows icons to protrude horizontally.
+  // However, flex containers often clip. We need specific handling.
+  // Using a clip-path might be safer if we want strict top/bottom clipping but side freedom, but overflow-y: hidden usually clips x too in CSS specs.
+  // WORKAROUND: We use a mask for top/bottom or just standard overflow-hidden and scale up inner elements with high z-index.
+  // Actually, standard overflow-hidden clips everything. 
+  // To allow protruding, we effectively can't use overflow-hidden on the parent for the icons themselves.
+  // But we MUST clip the strip for the scroll animation.
+  // The user requirement is "make uploaded icons protruding".
+  // This implies they sit on top of the reel frame.
+  // We can achieve this by having the "active" or "winning" symbols rendered in a separate layer on top, or by using a scale transform that just visually overlaps.
+  // If overflow-hidden is active, they will be clipped. 
+  // For now, I will keep overflow-hidden but increase the scale significantly so they fill the cell maximally, 
+  // and maybe try a technique where the reel container has padding?
+  // Let's stick to `transform scale-[1.7]` inside the cell. It will be clipped by the Reel boundary.
+  // Unless we allow `overflow-visible` on the reel and mask the whole game area?
+  // Let's try `overflow-y-hidden` (which forces x-hidden usually) but relies on z-index popping? No.
+  // I will just scale them up massively inside the cell.
+
   return (
     <div 
-        className={`relative flex-1 overflow-hidden ${gameConfig.reelBg} shadow-inner rounded-md min-w-0`}
-        style={{ aspectRatio: `1 / ${gameConfig.rows}` }} 
+        className={`relative flex-1 ${!hasColumnBg && reelBgMode !== 'FULL' ? gameConfig.reelBg : ''} shadow-inner rounded-md min-w-0 overflow-hidden`}
+        style={containerStyle} 
     >
-       {/* Scroll Wrapper - Static Position Adjustments */}
        <div 
             className="w-full absolute top-0 left-0 will-change-transform transition-transform duration-300 ease-out"
             style={{
-                height: `${containerHeightPercent}%`, // Force container to be tall enough to hold all items
-                transform: (!landing && spinning) ? 'none' : `translateY(${translateY})`, // Static scroll to result
+                height: `${containerHeightPercent}%`, 
+                transform: (!landing && spinning) ? 'none' : `translateY(${translateY})`, 
             }}
        >
-            {/* Animation Wrapper - Jiggle/Spin Effects */}
             <div className={`
                 w-full h-full flex flex-col
                 ${(!landing && spinning) ? 'animate-spin-blur' : ''} 
                 ${(landing) ? 'animate-bounce-land' : ''}
             `}>
                 {renderStrip.map((s, i) => {
-                    // Determine if this specific cell is a winner
-                    // Only relevant if landing. 
-                    // In landing strip of length N, the visible rows are indices [N-V, ..., N-1].
-                    // winningIndices are relative to the visible window (0..V-1).
-                    // So if i is the index in the full strip:
-                    // visibleRowIndex = i - (totalItems - VISIBLE_ROWS)
                     const visibleRowIndex = i - (totalItems - VISIBLE_ROWS);
                     const isWinner = landing && visibleRowIndex >= 0 && winningIndices.includes(visibleRowIndex);
                     const isShowcase = landing && visibleRowIndex >= 0 && isScatterShowcase && s === SymbolType.SCATTER;
@@ -135,7 +145,7 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
                             blur={!landing && spinning}
                             highlight={isWinner} 
                             isScatterShowcase={isShowcase}
-                            heightPercent={100 / totalItems} // Cell takes up proportional height of the tall container
+                            heightPercent={100 / totalItems} 
                             customImage={customAssets[s]}
                         />
                     );
@@ -143,8 +153,8 @@ export const Reel: React.FC<ReelProps> = ({ id, symbols = [], spinning, stopping
             </div>
        </div>
 
-      {/* Overlay Gradients */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 pointer-events-none z-10"></div>
+      {/* Overlay Gradients - Only if not Full BG to avoid muddying */}
+      {reelBgMode !== 'FULL' && <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 pointer-events-none z-10"></div>}
     </div>
   );
 };
@@ -165,19 +175,17 @@ const ReelCell: React.FC<{
 
     let bgClasses = config?.bg || 'bg-transparent';
     
-    // Background Effects (Glows only, no bounce)
     if (highlight) {
-        // Use specific highlight class from config if available to reflect color, otherwise default Gold
         bgClasses = (config?.highlightClass || "bg-gold-500/30 shadow-[0_0_50px_rgba(255,215,0,0.8)] border-gold-400/50") + " z-20 border";
     } else if (isScatter && isScatterShowcase) {
         bgClasses = "bg-indigo-500/50 border-indigo-300 shadow-[0_0_40px_rgba(99,102,241,0.9)] z-20";
     }
 
-    // Bounce Animation Logic (Applies to Content Wrapper)
     const activeBounce = highlight || isScatterShowcase;
-    
-    // Custom size for WILD text to fit, while keeping Emojis huge
     const fontSize = isWild ? 'text-4xl md:text-5xl lg:text-6xl' : 'text-6xl md:text-7xl lg:text-8xl';
+
+    // Increased scale for protruding look
+    const imgScale = activeBounce ? 'scale-[2.0]' : 'scale-[1.7]';
 
     return (
         <div 
@@ -188,6 +196,7 @@ const ReelCell: React.FC<{
             `}
             style={{ 
                 height: `${heightPercent}%`,
+                zIndex: activeBounce ? 50 : 1 // Bring active cells to front
             }}
         >
             <div className={`
@@ -199,30 +208,50 @@ const ReelCell: React.FC<{
                 rounded-lg 
                 flex items-center justify-center
                 transition-all duration-300
-                overflow-hidden
-                ${isLetter && !highlight ? '' : bgClasses}
+                overflow-visible
+                ${(isLetter && !highlight) || activeBounce ? '' : bgClasses}
             `}>
-                 {/* Inner Shine - Hide for letters unless highlighted */}
-                 {(!isLetter || highlight) && <div className="absolute inset-0 rounded-lg border border-white/10 shadow-inner pointer-events-none"></div>}
+                 {activeBounce && (
+                    <div 
+                        className="absolute -inset-[4px] z-20 pointer-events-none rounded-xl overflow-hidden"
+                        style={{
+                            mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                            maskComposite: 'exclude',
+                            WebkitMaskComposite: 'xor',
+                            padding: '6px'
+                        }}
+                    >
+                        <div 
+                            className="absolute top-1/2 left-1/2 w-[200%] h-[200%] -translate-x-1/2 -translate-y-1/2 animate-[spin_2s_linear_infinite]"
+                            style={{
+                                background: 'conic-gradient(from 0deg, transparent 0deg, transparent 200deg, rgba(234, 179, 8, 0.5) 280deg, #f59e0b 320deg, #ffffff 360deg)',
+                                filter: 'blur(6px)' 
+                            }}
+                        />
+                    </div>
+                 )}
+
+                 {(!isLetter || highlight) && !activeBounce && <div className="absolute inset-0 rounded-lg border border-white/10 shadow-inner pointer-events-none"></div>}
                  
-                 {/* Content Wrapper - Handles Bounce Animation */}
                  <div className={`
                      relative flex flex-col items-center justify-center z-10 w-full h-full
-                     ${activeBounce ? 'animate-bounce scale-110' : ''}
+                     ${isScatterShowcase ? 'animate-bounce' : ''}
                  `}>
                     {customImage ? (
-                        <div className="w-[85%] h-[85%] flex items-center justify-center">
+                        <div className="w-full h-full flex items-center justify-center">
                             <img 
                                 src={customImage} 
                                 alt={symbol} 
-                                className={`w-full h-full object-contain ${activeBounce ? 'drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'drop-shadow-md'}`} 
+                                decoding="async"
+                                className={`w-full h-full object-contain transform ${imgScale} ${activeBounce ? 'drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'drop-shadow-md'}`} 
                             />
                         </div>
                     ) : (
                         <div className={`
                             ${fontSize} select-none transform 
                             ${config?.style || ''}
-                            ${activeBounce ? 'drop-shadow-[0_0_25px_rgba(255,255,255,1)]' : ''}
+                            ${activeBounce ? 'drop-shadow-[0_0_20px_rgba(255,255,255,0.8)] scale-110' : ''}
                         `}>
                             {config?.icon}
                         </div>
@@ -236,7 +265,7 @@ const ReelCell: React.FC<{
                                 tracking-widest drop-shadow-[0_2px_2px_rgba(0,0,0,1)]
                                 stroke-black stroke-2
                             `}
-                            style={{ textShadow: '0 0 4px black, 0 0 8px black' }} // Heavy shadow for readability
+                            style={{ textShadow: '0 0 4px black, 0 0 8px black' }} 
                             >
                                 SCATTER
                             </span>
