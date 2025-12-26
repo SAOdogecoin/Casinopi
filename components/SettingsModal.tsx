@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { GameConfig, SymbolType } from '../types';
+import { GameConfig, SymbolType, CustomAssetMap } from '../types';
 import { GAMES_CONFIG, GET_SYMBOLS } from '../constants';
 
 interface SettingsModalProps {
@@ -10,10 +10,10 @@ interface SettingsModalProps {
     onToggleMute: () => void;
     disableLevelUp: boolean;
     onToggleLevelUp: () => void;
-    customAssets: Record<string, Record<string, string>>;
+    customAssets: CustomAssetMap;
     onUploadAsset: (scope: string, key: string, file: File | null) => void;
     onResetAssets: (gameId: string) => void;
-    onImportAssets: (assets: Record<string, Record<string, string>>) => void;
+    onImportAssets: (assets: CustomAssetMap) => void;
     onUpdateAssetValue?: (scope: string, key: string, value: string) => void;
 }
 

@@ -161,7 +161,6 @@ const App: React.FC = () => {
   useEffect(() => {
       loadAssetsFromDB().then((assets) => {
           setCustomAssets(assets);
-          // Set audio service custom sound if present
           if (assets.global?.WIN_SOUND) {
               audioService.setCustomWinSound(assets.global.WIN_SOUND);
           }
@@ -170,7 +169,6 @@ const App: React.FC = () => {
 
   // Save to StorageService whenever it changes (debounced)
   useEffect(() => {
-    // Update audio service if sound changes
     if (customAssets.global?.WIN_SOUND) {
         audioService.setCustomWinSound(customAssets.global.WIN_SOUND);
     } else {
@@ -400,7 +398,6 @@ const App: React.FC = () => {
       });
   };
 
-  // Allow setting direct values (for settings like Full/Column mode)
   const handleUpdateAssetValue = (scope: string, key: string, value: string) => {
         setCustomAssets(prev => {
             const newAssets = { ...prev };
@@ -770,36 +767,6 @@ const App: React.FC = () => {
       audioService.playWinBig();
   };
 
-  const getDeckReward = (level: number) => {
-      return (1000000 + (level * 500000)) * 100; 
-  };
-  const getGrandAlbumReward = (level: number) => {
-      return (10000000 + (level * 2000000)) * 10000;
-  };
-
-  const getRandomCard = () => {
-      const allCards: { deckId: string, cardIndex: number, card: Card }[] = [];
-      decks.forEach(d => d.cards.forEach((c, idx) => allCards.push({ deckId: d.gameId, cardIndex: idx, card: c })));
-      const randomPick = allCards[Math.floor(Math.random() * allCards.length)];
-      
-      const deck = decks.find(d => d.gameId === randomPick.deckId)!;
-      const card = deck.cards[randomPick.cardIndex];
-      
-      // Update deck state directly
-      const newDecks = decks.map(d => {
-          if (d.gameId === randomPick.deckId) {
-              const newCards = d.cards.map((c, i) => i === randomPick.cardIndex ? { ...c, count: c.count + 1 } : c);
-              const completed = newCards.every(c => c.count > 0);
-              return { ...d, cards: newCards, isCompleted: completed };
-          }
-          return d;
-      });
-      setDecks(newDecks);
-      
-      setCelebrationMsg(`Found Card: ${card.name}!`);
-      audioService.playWinSmall();
-  };
-
   const generateSmartGrid = useCallback(() => {
       const cols = selectedGame.reels;
       const rows = selectedGame.rows;
@@ -1044,12 +1011,6 @@ const App: React.FC = () => {
       setSpinsWithoutBonus(prev => prev + 1);
       updateMissions(MissionType.SPIN_COUNT, 1);
       updateMissions(MissionType.BET_COINS, currentBet);
-      
-      // Random Card Drop - 5% Chance
-      if (player.level >= 30 && Math.random() < 0.05) {
-          setTimeout(() => getRandomCard(), 500);
-      }
-
     } else {
         setFreeSpinsRemaining(prev => prev - 1);
         updateMissions(MissionType.SPIN_COUNT, 1);
