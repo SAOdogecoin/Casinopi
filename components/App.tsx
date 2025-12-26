@@ -1555,7 +1555,7 @@ const App: React.FC = () => {
   // Helper for Global Assets - Prioritizes Uploads
   const getIcon = (key: string, fallback: string) => {
       if (customAssets.global?.[key]) {
-          return <img src={customAssets.global[key]} alt={key} className="w-5 h-5 md:w-8 md:h-8 object-contain" />;
+          return <img src={customAssets.global[key]} alt={key} className="w-6 h-6 md:w-8 md:h-8 object-contain" />;
       }
       return <span className="text-xl md:text-2xl">{fallback}</span>;
   };
@@ -1607,33 +1607,33 @@ const App: React.FC = () => {
           <p className="text-gray-400 text-center px-8 mt-2">This game is optimized for landscape mode.</p>
       </div>
 
-      <header className="fixed top-0 w-full z-[100] bg-gradient-to-b from-[#4c1d95] to-[#2e1065] px-2 md:px-4 flex justify-between items-center shadow-[0_8px_15px_rgba(0,0,0,0.6)] h-[35px] md:h-[64px]">
+      <header className="fixed top-0 w-full z-[100] bg-gradient-to-b from-[#4c1d95] to-[#2e1065] px-2 md:px-4 flex justify-between items-center shadow-[0_8px_15px_rgba(0,0,0,0.6)] h-[50px] md:h-[70px]">
           <div className="flex items-center gap-2 md:gap-6 relative z-10 w-1/2">
              {(currentView === 'GAME' || activeModal !== 'NONE') && (
-                 <button onClick={handleHeaderBack} className="w-6 h-6 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 border border-white/20 flex items-center justify-center shadow-lg hover:scale-105 shrink-0 active:scale-95 transition-transform">
+                 <button onClick={handleHeaderBack} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 border border-white/20 flex items-center justify-center shadow-lg hover:scale-105 shrink-0 active:scale-95 transition-transform">
                     {activeModal !== 'NONE' ? (
-                        <span className="text-xs md:text-base font-bold text-white">⬅</span>
+                        <span className="text-sm md:text-lg font-bold text-white">⬅</span>
                     ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 md:h-5 md:w-5 text-white" fill="currentColor" viewBox="0 0 24 24" stroke="none">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="currentColor" viewBox="0 0 24 24" stroke="none">
                             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
                         </svg>
                     )}
                  </button>
              )}
-             <div className="flex items-center gap-1 drop-shadow-md shrink-0 bg-black/20 rounded-full px-2 py-0.5 md:py-1 shadow-inner">
+             <div className="flex items-center gap-1 drop-shadow-md shrink-0 bg-black/20 rounded-full px-2 py-1 md:py-1.5 shadow-inner">
                  <span className="filter drop-shadow">{getIcon('COIN', '🪙')}</span>
-                 <span className="font-display font-bold text-sm md:text-xl text-gold-400">{formatCommaNumber(player.balance)}</span>
+                 <span className="font-display font-bold text-base md:text-xl text-gold-400">{formatCommaNumber(player.balance)}</span>
              </div>
-             <div className="flex items-center gap-1 drop-shadow-md shrink-0 bg-black/20 rounded-full px-2 py-0.5 md:py-1 shadow-inner">
+             <div className="flex items-center gap-1 drop-shadow-md shrink-0 bg-black/20 rounded-full px-2 py-1 md:py-1.5 shadow-inner">
                  <span className="filter drop-shadow">{getIcon('GEM', '💎')}</span>
-                 <span className="font-display font-bold text-sm md:text-xl text-cyan-400">{formatCommaNumber(player.diamonds)}</span>
+                 <span className="font-display font-bold text-base md:text-xl text-cyan-400">{formatCommaNumber(player.diamonds)}</span>
              </div>
           </div>
           
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-             <button onClick={() => openShop('COINS')} className="bg-gradient-to-b from-green-500 to-green-700 px-4 md:px-8 py-1 md:py-2 rounded-full shadow-[0_4px_0_rgb(21,128,61)] hover:shadow-[0_2px_0_rgb(21,128,61)] hover:translate-y-[2px] transition-all active:translate-y-[4px] active:shadow-none flex items-center gap-2">
-                 <div className="text-white font-black font-display text-xs md:text-xl uppercase tracking-wider drop-shadow-md">Buy Coins</div>
-                 <div className="animate-pulse">{getIcon('COIN', '🪙')}</div>
+             <button onClick={() => openShop('COINS')} className="bg-gradient-to-b from-green-500 to-green-700 px-4 md:px-8 py-2 md:py-3 rounded-full shadow-[0_4px_0_rgb(21,128,61)] hover:shadow-[0_2px_0_rgb(21,128,61)] hover:translate-y-[2px] transition-all active:translate-y-[4px] active:shadow-none flex items-center gap-2">
+                 <div className="text-white font-black font-display text-sm md:text-xl uppercase tracking-wider drop-shadow-md">Buy Coins</div>
+                 <div className="animate-pulse scale-125">{getIcon('COIN', '🪙')}</div>
              </button>
           </div>
 
@@ -1643,33 +1643,33 @@ const App: React.FC = () => {
                     {player.level >= 5 && (
                         <button 
                             onClick={handleOpenPiggyBank}
-                            className={`w-8 h-8 md:w-10 md:h-10 rounded-full bg-pink-600 border border-pink-400 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all overflow-hidden ${piggyGlow ? 'ring-4 ring-pink-300 shadow-[0_0_20px_#f472b6] scale-110' : ''}`}
+                            className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-pink-600 border border-pink-400 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all overflow-hidden ${piggyGlow ? 'ring-4 ring-pink-300 shadow-[0_0_20px_#f472b6] scale-110' : ''}`}
                         >
                             {getIcon('PIGGY', '🐷')}
                         </button>
                     )}
 
-                    <div className={`relative w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg z-20 ${player.xpMultiplier > 1 ? 'bg-gradient-to-br from-yellow-400 to-orange-600' : 'bg-gradient-to-br from-purple-600 to-indigo-800'}`}>
-                        <span className="text-white font-black text-xs md:text-lg drop-shadow-md">{player.level}</span>
+                    <div className={`relative w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg z-20 ${player.xpMultiplier > 1 ? 'bg-gradient-to-br from-yellow-400 to-orange-600' : 'bg-gradient-to-br from-purple-600 to-indigo-800'}`}>
+                        <span className="text-white font-black text-sm md:text-xl drop-shadow-md">{player.level}</span>
                     </div>
                     
-                    <div className="relative h-3 md:h-6 w-20 md:w-40 bg-black/60 rounded-full overflow-hidden shadow-inner ring-1 ring-white/10">
+                    <div className="relative h-4 md:h-6 w-24 md:w-40 bg-black/60 rounded-full overflow-hidden shadow-inner ring-1 ring-white/10">
                         <div className={`h-full transition-all duration-500 ${player.xpMultiplier > 1 ? 'bg-gradient-to-r from-yellow-300 via-yellow-500 to-orange-500' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500'}`} style={{ width: `${(player.xp / player.xpToNextLevel) * 100}%` }}></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-[8px] md:text-[10px] font-bold text-white drop-shadow-md">
+                            <span className="text-[10px] md:text-xs font-bold text-white drop-shadow-md">
                                 {player.xp} / {player.xpToNextLevel}
                             </span>
                         </div>
                     </div>
                  </div>
              </div>
-             <button onClick={() => openModal('SETTINGS')} className="text-white hover:text-gray-200 transition-colors drop-shadow-md bg-black/20 p-1 rounded-full w-8 h-8 md:w-10 md:h-10 flex items-center justify-center overflow-hidden">
-                 <span className="text-sm md:text-lg">⚙️</span>
+             <button onClick={() => openModal('SETTINGS')} className="text-white hover:text-gray-200 transition-colors drop-shadow-md bg-black/20 p-1.5 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center overflow-hidden">
+                 <span className="text-lg md:text-xl">⚙️</span>
              </button>
           </div>
       </header>
 
-      <main className={`relative pt-[35px] md:pt-[64px] w-full h-screen flex flex-col overflow-hidden`}>
+      <main className={`relative pt-[50px] md:pt-[70px] w-full h-screen flex flex-col overflow-hidden`}>
         {currentView === 'LOBBY' ? (
             <Lobby 
                 onSelectGame={handleGameSelect} 
@@ -1689,7 +1689,7 @@ const App: React.FC = () => {
                 customAssets={customAssets}
             />
         ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-2 relative h-full pb-[80px] md:pb-[120px]">
+            <div className="flex-1 flex flex-col items-center justify-center p-2 relative h-full pb-[110px] md:pb-[140px]">
                 <div className="mb-2 text-center z-10 hidden md:block w-full max-w-4xl">
                     <JackpotTicker currentBet={availableBets[betIndex]} />
                     {isHighLimit && <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-widest shadow-lg mt-1 inline-block">High Limit</span>}
@@ -1736,20 +1736,20 @@ const App: React.FC = () => {
       </main>
 
       {currentView === 'GAME' && (
-          <div className="fixed bottom-0 w-full z-50 bg-gradient-to-t from-[#1a052e] to-[#4c1d95] py-2 px-2 shadow-[0_-10px_30px_rgba(0,0,0,0.8)] h-[15vh] md:h-auto flex items-center">
+          <div className="fixed bottom-0 w-full z-50 bg-gradient-to-t from-[#1a052e] to-[#4c1d95] py-2 px-2 shadow-[0_-10px_30px_rgba(0,0,0,0.8)] h-[110px] md:h-auto flex items-center">
               <div className="w-full max-w-7xl mx-auto flex flex-row items-center justify-between gap-2 md:gap-4 h-full">
                   <div className="flex items-center gap-1 md:gap-2 shrink-0">
                       <div className="bg-black/40 p-1 rounded-2xl flex items-center shadow-inner relative h-full ring-1 ring-white/10">
-                          <button onClick={() => { setBetIndex(prev => Math.max(0, prev - 1)); audioService.playClick(); }} disabled={betIndex === 0 || status === GameStatus.SPINNING || status === GameStatus.STOPPING || player.autoSpin} className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-gradient-to-b from-gray-700 to-gray-900 hover:brightness-110 flex items-center justify-center text-lg md:text-2xl shadow-lg active:translate-y-0.5 disabled:opacity-50">-</button>
-                          <div className="flex flex-col items-center justify-center w-20 md:w-32 px-1">
-                              <span className={`text-sm md:text-lg font-mono font-bold text-white drop-shadow-md ${isHighLimit ? 'text-red-400' : ''}`}>{formatBet(availableBets[betIndex])}</span>
-                              <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Bet</span>
+                          <button onClick={() => { setBetIndex(prev => Math.max(0, prev - 1)); audioService.playClick(); }} disabled={betIndex === 0 || status === GameStatus.SPINNING || status === GameStatus.STOPPING || player.autoSpin} className="w-12 h-10 md:w-16 md:h-12 rounded-xl bg-gradient-to-b from-gray-700 to-gray-900 hover:brightness-110 flex items-center justify-center text-xl md:text-2xl shadow-lg active:translate-y-0.5 disabled:opacity-50 font-bold">-</button>
+                          <div className="flex flex-col items-center justify-center w-24 md:w-36 px-1">
+                              <span className={`text-base md:text-xl font-mono font-bold text-white drop-shadow-md ${isHighLimit ? 'text-red-400' : ''}`}>{formatBet(availableBets[betIndex])}</span>
+                              <span className="text-[10px] md:text-xs text-gray-400 uppercase font-bold tracking-widest">Bet</span>
                           </div>
-                          <button onClick={() => { setBetIndex(prev => Math.min(availableBets.length - 1, prev + 1)); audioService.playClick(); }} disabled={betIndex === availableBets.length - 1 || status === GameStatus.SPINNING || status === GameStatus.STOPPING || player.autoSpin} className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-gradient-to-b from-gray-700 to-gray-900 hover:brightness-110 flex items-center justify-center text-lg md:text-2xl shadow-lg active:translate-y-0.5 disabled:opacity-50">+</button>
+                          <button onClick={() => { setBetIndex(prev => Math.min(availableBets.length - 1, prev + 1)); audioService.playClick(); }} disabled={betIndex === availableBets.length - 1 || status === GameStatus.SPINNING || status === GameStatus.STOPPING || player.autoSpin} className="w-12 h-10 md:w-16 md:h-12 rounded-xl bg-gradient-to-b from-gray-700 to-gray-900 hover:brightness-110 flex items-center justify-center text-xl md:text-2xl shadow-lg active:translate-y-0.5 disabled:opacity-50 font-bold">+</button>
                       </div>
                       <div className="flex flex-col md:flex-row gap-1 items-center">
-                          <button onClick={() => { setBetIndex(availableBets.length - 1); audioService.playClick(); }} disabled={status === GameStatus.SPINNING || status === GameStatus.STOPPING} className={`w-10 h-8 md:w-14 md:h-12 rounded-xl bg-gradient-to-b from-red-600 to-red-800 hover:brightness-110 shadow-lg flex items-center justify-center active:translate-y-0.5 disabled:opacity-50 transition-all`}>
-                              <span className="text-[10px] md:text-xs font-black text-white uppercase leading-none transform -rotate-6">MAX</span>
+                          <button onClick={() => { setBetIndex(availableBets.length - 1); audioService.playClick(); }} disabled={status === GameStatus.SPINNING || status === GameStatus.STOPPING} className={`w-14 h-10 md:w-16 md:h-12 rounded-xl bg-gradient-to-b from-red-600 to-red-800 hover:brightness-110 shadow-lg flex items-center justify-center active:translate-y-0.5 disabled:opacity-50 transition-all`}>
+                              <span className="text-xs md:text-sm font-black text-white uppercase leading-none transform -rotate-6">MAX</span>
                           </button>
                       </div>
                   </div>
@@ -1758,7 +1758,7 @@ const App: React.FC = () => {
                            <span className="text-gold-500 text-[8px] md:text-[10px] font-bold uppercase tracking-[0.3em] mb-0.5 opacity-80">
                                {freeSpinsRemaining > 0 ? (status === GameStatus.WIN_ANIMATION && winData?.payout ? 'WIN' : 'FREE SPINS') : 'WIN'}
                            </span>
-                           <div className="text-3xl md:text-5xl font-black font-display text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] truncate w-full text-center">
+                           <div className="text-4xl md:text-5xl font-black font-display text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] truncate w-full text-center">
                                 {freeSpinsRemaining > 0 
                                     ? (status === GameStatus.WIN_ANIMATION && winData?.payout ? formatWinNumber(winData.payout) : freeSpinsRemaining) 
                                     : (winData?.payout ? formatWinNumber(winData.payout) : '0')}
@@ -1769,9 +1769,9 @@ const App: React.FC = () => {
                       <div className="flex flex-col gap-1 items-center">
                           <button 
                             onClick={() => { setFastSpin(!fastSpin); audioService.playClick(); }}
-                            className={`w-10 h-10 rounded-full shadow-lg transition-all active:scale-95 flex items-center justify-center ${fastSpin ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' : 'bg-gradient-to-br from-gray-700 to-gray-900 text-gray-400'}`}
+                            className={`w-12 h-12 rounded-full shadow-lg transition-all active:scale-95 flex items-center justify-center ${fastSpin ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' : 'bg-gradient-to-br from-gray-700 to-gray-900 text-gray-400'}`}
                           >
-                              <span className="text-lg">⚡</span>
+                              <span className="text-2xl">⚡</span>
                           </button>
                           <span className={`text-[8px] font-black uppercase ${fastSpin ? 'text-blue-300' : 'text-gray-500'}`}>{fastSpin ? 'FAST' : 'SLOW'}</span>
                       </div>
@@ -1783,7 +1783,7 @@ const App: React.FC = () => {
                           onTouchEnd={handleSpinMouseUp}
                           disabled={activeModal !== 'NONE' || showFreeSpinsPopup}
                           className={`
-                              relative w-20 h-20 md:w-32 md:h-32 rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.5)] flex items-center justify-center transition-transform active:scale-95
+                              relative w-24 h-24 md:w-32 md:h-32 rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.5)] flex items-center justify-center transition-transform active:scale-95
                               ${player.autoSpin ? 'bg-gradient-to-b from-red-500 to-red-800' : (status === GameStatus.SPINNING || status === GameStatus.STOPPING) ? 'grayscale cursor-default' : 'hover:scale-105 bg-gradient-to-b from-green-400 to-green-800'}
                           `}
                       >
@@ -1800,17 +1800,17 @@ const App: React.FC = () => {
                           <div className="relative z-10 text-center flex flex-col items-center justify-center">
                               {player.autoSpin ? (
                                   <>
-                                     <span className="text-xl md:text-3xl font-black text-white uppercase drop-shadow-lg">STOP</span>
+                                     <span className="text-2xl md:text-3xl font-black text-white uppercase drop-shadow-lg">STOP</span>
                                      <span className="text-sm md:text-[10px] font-bold text-white uppercase">Auto</span>
                                   </>
                               ) : (
-                                  <div className="text-xl md:text-3xl font-black text-white uppercase drop-shadow-lg text-shadow-md leading-none">
+                                  <div className="text-2xl md:text-3xl font-black text-white uppercase drop-shadow-lg text-shadow-md leading-none">
                                       {status === GameStatus.SPINNING || status === GameStatus.STOPPING ? 'STOP' : (freeSpinsRemaining > 0 ? 'AUTO' : 'SPIN')}
                                   </div>
                               )}
                               
                               {!player.autoSpin && freeSpinsRemaining === 0 && status === GameStatus.IDLE && (
-                                  <span className="text-[8px] md:text-[10px] text-green-100 font-bold uppercase mt-1">Hold Auto</span>
+                                  <span className="text-[10px] md:text-[10px] text-green-100 font-bold uppercase mt-1">Hold Auto</span>
                               )}
                           </div>
                       </button>
